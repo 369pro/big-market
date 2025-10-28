@@ -1,6 +1,8 @@
 package com.pro.domain.strategy.service.armory;
 
 import com.pro.domain.strategy.model.entity.StrategyAwardEntity;
+import com.pro.domain.strategy.model.entity.StrategyEntity;
+import com.pro.domain.strategy.model.entity.StrategyRuleEntity;
 import com.pro.domain.strategy.repository.IStrategyRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,11 +21,16 @@ import java.util.*;
  */
 @Slf4j
 @Service
-public class StrategyArmory implements IStrategyArmory {
+public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatch {
 
     @Resource
     private IStrategyRepository repository;
 
+    /**
+     * 4000:102,103,104,105 5000:102,103,104,105,106,107 6000:102,103,104,105,106,107,108,109
+     * @param strategyId 策略ID
+     * @return
+     */
     @Override
     public boolean assembleLotteryStrategy(Long strategyId) {
         // 1. 查询策略配置
@@ -31,6 +38,28 @@ public class StrategyArmory implements IStrategyArmory {
         if(ObjectUtils.isEmpty(strategyAwardEntities)){
             return false;
         }
+        assembleLotteryStrategy(String.valueOf(strategyId), strategyAwardEntities);
+        // 2. 查询权重配置--适用于 rule_weight 权重规则配置
+        StrategyEntity strategyEntity = repository.queryStrategyEntityByStrategyId(strategyId);
+        String ruleWeight = strategyEntity.getRuleWeight();
+        // 没有权重配置
+        if(ruleWeight == null){
+            return true;
+        }
+        StrategyRuleEntity strategyRuleEntity = repository.queryStrategyRule(strategyId, ruleWeight);
+        Map<String, List<Integer>> ruleWeightValueMap = strategyRuleEntity.getRuleWeightValues();
+        Set<String> keys = ruleWeightValueMap.keySet();
+        for(String key : keys){
+            List<Integer> ruleWeightValueList = ruleWeightValueMap.get(key);
+            ArrayList<StrategyAwardEntity> strategyAwardEntitiesClone = new ArrayList<>(strategyAwardEntities);
+            // 删除规则权重外的entity，剩下的（表里面配置的）重新装配并且放入redis
+            strategyAwardEntitiesClone.removeIf(entity -> !ruleWeightValueList.contains(entity.getAwardId()));
+            assembleLotteryStrategy(String.valueOf(strategyId).concat("_").concat(key), strategyAwardEntitiesClone);
+        }
+        return true;
+    }
+    // todo 重构此函数
+    private void assembleLotteryStrategy(String key, List<StrategyAwardEntity> strategyAwardEntities) {
 
         // 2. 获取最小概率值
         BigDecimal minAwardRate = strategyAwardEntities.stream()
@@ -69,9 +98,8 @@ public class StrategyArmory implements IStrategyArmory {
         }
 
         // 8. 存放到 Redis
-        repository.storeStrategyAwardSearchRateTable(strategyId, shuffleStrategyAwardSearchRateTable.size(), shuffleStrategyAwardSearchRateTable);
+        repository.storeStrategyAwardSearchRateTable(key, shuffleStrategyAwardSearchRateTable.size(), shuffleStrategyAwardSearchRateTable);
 
-        return true;
     }
 
     @Override
