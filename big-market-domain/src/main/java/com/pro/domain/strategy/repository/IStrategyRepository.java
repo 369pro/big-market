@@ -19,7 +19,7 @@ public interface IStrategyRepository {
 
     void storeStrategyAwardSearchRateTable(String key, Integer rateRange, Map<Integer, Integer> strategyAwardSearchRateTable);
 
-    Integer getStrategyAwardAssemble(Long strategyId, Integer rateKey);
+    Integer getStrategyAwardAssemble(String key, Integer rateKey);
 
     int getRateRange(String key);
 

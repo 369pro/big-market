@@ -111,7 +111,7 @@ public class StrategyRepository implements IStrategyRepository {
     }
 
     @Override
-    public Integer getStrategyAwardAssemble(Long strategyId, Integer rateKey) {
+    public Integer getStrategyAwardAssemble(String strategyId, Integer rateKey) {
         return redisService.getFromMap(Constants.RedisKey.STRATEGY_RATE_TABLE_KEY + strategyId, rateKey);
     }
 
