@@ -38,6 +38,7 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
         if(ObjectUtils.isEmpty(strategyAwardEntities)){
             return false;
         }
+        // 查出全部概率配置，进行装配
         assembleLotteryStrategy(String.valueOf(strategyId), strategyAwardEntities);
         // 2. 查询权重配置--适用于 rule_weight 权重规则配置
         StrategyEntity strategyEntity = repository.queryStrategyEntityByStrategyId(strategyId);
@@ -54,6 +55,7 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
             ArrayList<StrategyAwardEntity> strategyAwardEntitiesClone = new ArrayList<>(strategyAwardEntities);
             // 删除规则权重外的entity，剩下的（表里面配置的）重新装配并且放入redis
             strategyAwardEntitiesClone.removeIf(entity -> !ruleWeightValueList.contains(entity.getAwardId()));
+            // 按照不同的key切分，分开装配
             assembleLotteryStrategy(String.valueOf(strategyId).concat("_").concat(key), strategyAwardEntitiesClone);
         }
         return true;
@@ -94,6 +96,7 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
         // 7. 生成出Map集合，key值，对应的就是后续的概率值。通过概率来获得对应的奖品ID
         Map<Integer, Integer> shuffleStrategyAwardSearchRateTable = new LinkedHashMap<>();
         for (int i = 0; i < strategyAwardSearchRateTables.size(); i++) {
+            // <i, awardId(打乱后的)>
             shuffleStrategyAwardSearchRateTable.put(i, strategyAwardSearchRateTables.get(i));
         }
 
@@ -117,7 +120,7 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
         log.info("key = {}", key);
         // 分布式部署下，不一定为当前应用做的策略装配。也就是值不一定会保存到本应用，而是分布式应用，所以需要从 Redis 中获取。
         int rateRange = repository.getRateRange(key);
-        // 通过生成的随机值，获取概率值奖品查找表的结果
+        // 通过生成的随机值，获取概率值奖品查找表的结果(key,<rateKey, awardId>)需要两层获取
         return repository.getStrategyAwardAssemble(key, new SecureRandom().nextInt(rateRange));
     }
 }
