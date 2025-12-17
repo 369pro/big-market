@@ -4,6 +4,7 @@ package com.pro.domain.strategy.repository;
 import com.pro.domain.strategy.model.entity.StrategyAwardEntity;
 import com.pro.domain.strategy.model.entity.StrategyEntity;
 import com.pro.domain.strategy.model.entity.StrategyRuleEntity;
+import com.pro.domain.strategy.model.valobj.StrategyAwardRuleModelVO;
 
 import java.util.List;
 import java.util.Map;
@@ -31,4 +32,5 @@ public interface IStrategyRepository {
 
     String queryStrategyRuleValue(Long strategyId, Integer awardId, String ruleModel);
 
+    StrategyAwardRuleModelVO queryStrategyAwardRuleModelVO(Long strategyId, Integer awardId);
 }
