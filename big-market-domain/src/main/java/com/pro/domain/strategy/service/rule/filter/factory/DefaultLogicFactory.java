@@ -1,4 +1,4 @@
-package com.pro.domain.strategy.service.rule.factory;
+package com.pro.domain.strategy.service.rule.filter.factory;
 
 
 import com.pro.domain.strategy.model.entity.RuleActionEntity;
