@@ -1,4 +1,4 @@
-# 命令执行 docker-compose -f docker-compose-environment.yml up -d
+# 命令执行 docker-compose up -d
 version: '3.9'
 services:
   mysql:
@@ -8,13 +8,16 @@ services:
     restart: always
     environment:
       TZ: Asia/Shanghai
+      # MYSQL_ALLOW_EMPTY_PASSWORD: 'yes' # 可配置无密码，注意配置 SPRING_DATASOURCE_PASSWORD=
       MYSQL_ROOT_PASSWORD: 123456
+      # MYSQL_USER: xfg
+      # MYSQL_PASSWORD: RTry78@#ww
     networks:
       - my-network
     depends_on:
       - mysql-job-dbdata
     ports:
-      - "3306:3306"
+      - "13306:3306"
     volumes:
       - ./mysql/sql:/docker-entrypoint-initdb.d
     healthcheck:
@@ -52,13 +55,13 @@ services:
 
   # Redis
   redis:
-    image: redis:6.2
+    image: redis:7.2.0
     container_name: redis
     restart: always
     hostname: redis
     privileged: true
     ports:
-      - 6379:6379
+      - 16379:6379
     volumes:
       - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
     command: redis-server /usr/local/etc/redis/redis.conf
