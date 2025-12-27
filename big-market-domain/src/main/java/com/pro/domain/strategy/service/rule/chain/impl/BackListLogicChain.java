@@ -2,6 +2,7 @@ package com.pro.domain.strategy.service.rule.chain.impl;
 
 import com.pro.domain.strategy.repository.IStrategyRepository;
 import com.pro.domain.strategy.service.rule.chain.AbstractLogicChain;
+import com.pro.domain.strategy.service.rule.chain.factory.DefaultChainFactory;
 import com.pro.types.common.Constants;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -18,19 +19,22 @@ public class BackListLogicChain extends AbstractLogicChain {
      * return awardId
      * */
     @Override
-    public Integer logic(String userId, Long strategyId) {
+    public DefaultChainFactory.StrategyAwardVO logic(String userId, Long strategyId) {
         log.info("规则过滤-黑名单 userId:{} strategyId:{} ruleModel:{}",
                 userId, strategyId, ruleModel());
         // 这边awardId为空
         String ruleValue = repository.queryStrategyRuleValue(strategyId,  ruleModel());
+
         String[] splitRuleValue = ruleValue.split(Constants.COLON);
         Integer awardId = Integer.parseInt(splitRuleValue[0]);
         String[] userBlackIds = splitRuleValue[1].split(Constants.SPLIT);
         for(String userBlackId : userBlackIds) {
             if (userId.equals(userBlackId)) {
-                log.info("抽奖责任链-黑名单接管 userId: {} strategyId: {} ruleModel: {} awardId: {}", userId,
-                        strategyId, ruleModel(), awardId);
-                return awardId;
+                log.info("抽奖责任链-黑名单接管 userId: {} strategyId: {} ruleModel: {} awardId: {}", userId, strategyId, ruleModel(), awardId);
+                return DefaultChainFactory.StrategyAwardVO.builder()
+                        .awardId(awardId)
+                        .logicModel(ruleModel())
+                        .build();
             }
         }
         // 转交其他责任链
@@ -40,6 +44,6 @@ public class BackListLogicChain extends AbstractLogicChain {
 
     @Override
     protected String ruleModel() {
-        return "rule_blacklist";
+        return DefaultChainFactory.LogicModel.RULE_BLACKLIST.getCode();
     }
 }
