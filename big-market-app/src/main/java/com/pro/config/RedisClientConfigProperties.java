@@ -25,7 +25,7 @@ public class RedisClientConfigProperties {
     /** 设置连接的最大空闲时间（单位：毫秒），超过该时间的空闲连接将被关闭，默认为10000 */
     private int idleTimeout = 10000;
     /** 设置连接超时时间（单位：毫秒），默认为10000 */
-    private int connectTimeout = 10000;
+    private int connectTimeout = 600000;
     /** 设置连接重试次数，默认为3 */
     private int retryAttempts = 3;
     /** 设置连接重试的间隔时间（单位：毫秒），默认为1000 */

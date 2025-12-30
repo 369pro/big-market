@@ -4,6 +4,7 @@ import com.pro.domain.strategy.model.entity.StrategyAwardEntity;
 import com.pro.domain.strategy.model.entity.StrategyEntity;
 import com.pro.domain.strategy.model.entity.StrategyRuleEntity;
 import com.pro.domain.strategy.repository.IStrategyRepository;
+import com.pro.types.common.Constants;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
@@ -26,6 +27,7 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
     @Resource
     private IStrategyRepository repository;
 
+    private final SecureRandom secureRandom = new SecureRandom();
     /**
      * 4000:102,103,104,105 5000:102,103,104,105,106,107 6000:102,103,104,105,106,107,108,109
      * @param strategyId 策略ID
@@ -38,9 +40,16 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
         if(ObjectUtils.isEmpty(strategyAwardEntities)){
             return false;
         }
-        // 查出全部概率配置，进行装配
+        // 2 缓存奖品库存【用于decr扣减库存使用】
+        for (StrategyAwardEntity strategyAward : strategyAwardEntities) {
+            Integer awardId = strategyAward.getAwardId();
+            Integer awardCount = strategyAward.getAwardCount();
+            cacheStrategyAwardCount(strategyId, awardId, awardCount);
+        }
+
+        // 3.1 默认装配配置【全量抽奖概率】<strategyId,StrategyAwardEntity>
         assembleLotteryStrategy(String.valueOf(strategyId), strategyAwardEntities);
-        // 2. 查询权重配置--适用于 rule_weight 权重规则配置
+        // 3.2 查询权重配置--适用于 rule_weight 权重规则配置
         StrategyEntity strategyEntity = repository.queryStrategyEntityByStrategyId(strategyId);
         String ruleWeight = strategyEntity.getRuleWeight();
         // 没有权重配置
@@ -59,6 +68,11 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
             assembleLotteryStrategy(String.valueOf(strategyId).concat("_").concat(key), strategyAwardEntitiesClone);
         }
         return true;
+    }
+
+    private void cacheStrategyAwardCount(Long strategyId, Integer awardId, Integer awardCount) {
+        String cacheKey = Constants.RedisKey.STRATEGY_AWARD_COUNT_KEY + strategyId + Constants.UNDERLINE + awardId;
+        repository.cacheStrategyAwardCount(cacheKey, awardCount);
     }
     // todo 重构此函数
     /**
@@ -114,7 +128,7 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
         // 分布式部署下，不一定为当前应用做的策略装配。也就是值不一定会保存到本应用，而是分布式应用，所以需要从 Redis 中获取。
         int rateRange = repository.getRateRange(strategyId);
         // 通过生成的随机值，获取概率值奖品查找表的结果
-        return repository.getStrategyAwardAssemble(String.valueOf(strategyId), new SecureRandom().nextInt(rateRange));
+        return repository.getStrategyAwardAssemble(String.valueOf(strategyId), secureRandom.nextInt(rateRange));
     }
 
     @Override
@@ -125,11 +139,11 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
         // 分布式部署下，不一定为当前应用做的策略装配。也就是值不一定会保存到本应用，而是分布式应用，所以需要从 Redis 中获取。
         int rateRange = repository.getRateRange(key);
         // 通过生成的随机值，获取概率值奖品查找表的结果(key,<rateKey, awardId>)需要两层获取
-        return repository.getStrategyAwardAssemble(key, new SecureRandom().nextInt(rateRange));
+        return repository.getStrategyAwardAssemble(key, secureRandom.nextInt(rateRange));
     }
 
     /**
-     * 转换计算，只根据小数位来计算。如【0.01返回100】、【0.009返回1000】、【0.0018返回10000】
+     * todo 此处问题转换计算，只根据小数位来计算。如【0.01返回100】、【0.009返回1000】、【0.0018返回10000】
      */
     private double convert(double min){
         double rangeRes = 1.0;
@@ -138,5 +152,11 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
             rangeRes *= 10;
         }
         return rangeRes;
+    }
+
+    @Override
+    public Boolean subtractionAwardStock(Long strategyId, Integer awardId) {
+        String cacheKey = Constants.RedisKey.STRATEGY_AWARD_COUNT_KEY + strategyId + Constants.UNDERLINE + awardId;
+        return repository.subtractionAwardStock(cacheKey);
     }
 }

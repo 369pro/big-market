@@ -1,14 +1,10 @@
-package com.pro.domain.strategy.service.raffle;
+package com.pro.domain.strategy.service;
 
 
 import com.pro.domain.strategy.model.entity.RaffleAwardEntity;
 import com.pro.domain.strategy.model.entity.RaffleFactorEntity;
-import com.pro.domain.strategy.model.valobj.RuleLogicCheckTypeVO;
-import com.pro.domain.strategy.model.valobj.StrategyAwardRuleModelVO;
 import com.pro.domain.strategy.repository.IStrategyRepository;
-import com.pro.domain.strategy.service.IRaffleStrategy;
 import com.pro.domain.strategy.service.armory.IStrategyDispatch;
-import com.pro.domain.strategy.service.rule.chain.ILogicChain;
 import com.pro.domain.strategy.service.rule.chain.factory.DefaultChainFactory;
 import com.pro.domain.strategy.service.rule.tree.factory.DefaultTreeFactory;
 import com.pro.types.enums.ResponseCode;
@@ -22,7 +18,7 @@ import org.apache.commons.lang3.StringUtils;
  * @Version: 1.0
  */
 @Slf4j
-public abstract class AbstractRaffleStrategy implements IRaffleStrategy {
+public abstract class AbstractRaffleStrategy implements IRaffleStrategy,IRaffleStock {
     protected IStrategyRepository repository;
     protected IStrategyDispatch strategyDispatch;
     // 抽奖的责任链 -> 从抽奖的规则中，解耦出前置规则为责任链处理
