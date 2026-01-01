@@ -64,4 +64,14 @@ public class LogicChainTest {
         log.info("测试结果：{}", JSON.toJSONString(strategyAwardVO));
     }
 
+    @Test
+    public void test_LogicChain() {
+        // rule_blacklist,rule_weight
+        ILogicChain logicChain1 = defaultChainFactory.openLogicChain(100001L);
+        // rule_blacklist
+        // 单例模式下 logicChain2 覆盖 logicChain1
+        // 因为 private Map<String, ILogicChain> logicChainGroup 是公用的
+        ILogicChain logicChain2 = defaultChainFactory.openLogicChain(100003L);
+    }
+
 }

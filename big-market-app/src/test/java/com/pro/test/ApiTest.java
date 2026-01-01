@@ -1,6 +1,7 @@
 package com.pro.test;
 
 import com.alibaba.fastjson2.JSON;
+import com.pro.trigger.api.dto.RaffleAwardListRequestDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
 import org.junit.runner.RunWith;
