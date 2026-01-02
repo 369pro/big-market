@@ -1,4 +1,4 @@
-package com.pro.test.domain;
+package com.pro.test.domain.strategy;
 
 import com.pro.domain.strategy.service.armory.IStrategyArmory;
 import com.pro.infrastructure.persistent.redis.IRedisService;
