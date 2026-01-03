@@ -1,6 +1,7 @@
 package com.pro.domain.activity.repository;
 
 
+import com.pro.domain.activity.model.aggregate.CreateOrderAggregate;
 import com.pro.domain.activity.model.entity.ActivityCountEntity;
 import com.pro.domain.activity.model.entity.ActivityEntity;
 import com.pro.domain.activity.model.entity.ActivitySkuEntity;
@@ -18,4 +19,5 @@ public interface IActivityRepository {
 
     ActivityCountEntity queryRaffleActivityCountByActivityCountId(Long activityCountId);
 
+    void doSaveOrder(CreateOrderAggregate createOrderAggregate);
 }

@@ -7,7 +7,7 @@
 #
 # 主机: 127.0.0.1 (MySQL 5.6.39)
 # 数据库: big_market_02
-# 生成时间: 2024-03-16 07:12:43 +0000
+# 生成时间: 2024-03-23 07:33:49 +0000
 # ************************************************************
 
 
@@ -43,6 +43,11 @@ CREATE TABLE `raffle_activity_account` (
   UNIQUE KEY `uq_user_id_activity_id` (`user_id`,`activity_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='抽奖活动账户表';
 
+LOCK TABLES `raffle_activity_account` WRITE;
+/*!40000 ALTER TABLE `raffle_activity_account` DISABLE KEYS */;
+
+/*!40000 ALTER TABLE `raffle_activity_account` ENABLE KEYS */;
+UNLOCK TABLES;
 
 
 # 转储表 raffle_activity_order_000
@@ -62,11 +67,13 @@ CREATE TABLE `raffle_activity_order_000` (
   `total_count` int(8) NOT NULL COMMENT '总次数',
   `day_count` int(8) NOT NULL COMMENT '日次数',
   `month_count` int(8) NOT NULL COMMENT '月次数',
-  `state` varchar(8) NOT NULL DEFAULT 'complete' COMMENT '订单状态（complete）',
+  `state` varchar(16) NOT NULL DEFAULT 'complete' COMMENT '订单状态（complete）',
+  `out_business_no` varchar(64) NOT NULL COMMENT '业务仿重ID - 外部透传的，确保幂等',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_order_id` (`order_id`),
+  UNIQUE KEY `uq_out_business_no` (`out_business_no`),
   KEY `idx_user_id_activity_id` (`user_id`,`activity_id`,`state`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='抽奖活动单';
 
@@ -89,14 +96,21 @@ CREATE TABLE `raffle_activity_order_001` (
   `total_count` int(8) NOT NULL COMMENT '总次数',
   `day_count` int(8) NOT NULL COMMENT '日次数',
   `month_count` int(8) NOT NULL COMMENT '月次数',
-  `state` varchar(8) NOT NULL DEFAULT 'complete' COMMENT '订单状态（complete）',
+  `state` varchar(16) NOT NULL DEFAULT 'complete' COMMENT '订单状态（complete）',
+  `out_business_no` varchar(64) NOT NULL COMMENT '业务仿重ID - 外部透传的，确保幂等',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_order_id` (`order_id`),
+  UNIQUE KEY `uq_out_business_no` (`out_business_no`),
   KEY `idx_user_id_activity_id` (`user_id`,`activity_id`,`state`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='抽奖活动单';
 
+LOCK TABLES `raffle_activity_order_001` WRITE;
+/*!40000 ALTER TABLE `raffle_activity_order_001` DISABLE KEYS */;
+
+/*!40000 ALTER TABLE `raffle_activity_order_001` ENABLE KEYS */;
+UNLOCK TABLES;
 
 
 # 转储表 raffle_activity_order_002
@@ -116,11 +130,13 @@ CREATE TABLE `raffle_activity_order_002` (
   `total_count` int(8) NOT NULL COMMENT '总次数',
   `day_count` int(8) NOT NULL COMMENT '日次数',
   `month_count` int(8) NOT NULL COMMENT '月次数',
-  `state` varchar(8) NOT NULL DEFAULT 'complete' COMMENT '订单状态（complete）',
+  `state` varchar(16) NOT NULL DEFAULT 'complete' COMMENT '订单状态（complete）',
+  `out_business_no` varchar(64) NOT NULL COMMENT '业务仿重ID - 外部透传的，确保幂等',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_order_id` (`order_id`),
+  UNIQUE KEY `uq_out_business_no` (`out_business_no`),
   KEY `idx_user_id_activity_id` (`user_id`,`activity_id`,`state`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='抽奖活动单';
 
@@ -143,11 +159,13 @@ CREATE TABLE `raffle_activity_order_003` (
   `total_count` int(8) NOT NULL COMMENT '总次数',
   `day_count` int(8) NOT NULL COMMENT '日次数',
   `month_count` int(8) NOT NULL COMMENT '月次数',
-  `state` varchar(8) NOT NULL DEFAULT 'complete' COMMENT '订单状态（complete）',
+  `state` varchar(16) NOT NULL DEFAULT 'complete' COMMENT '订单状态（complete）',
+  `out_business_no` varchar(64) NOT NULL COMMENT '业务仿重ID - 外部透传的，确保幂等',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_order_id` (`order_id`),
+  UNIQUE KEY `uq_out_business_no` (`out_business_no`),
   KEY `idx_user_id_activity_id` (`user_id`,`activity_id`,`state`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='抽奖活动单';
 
