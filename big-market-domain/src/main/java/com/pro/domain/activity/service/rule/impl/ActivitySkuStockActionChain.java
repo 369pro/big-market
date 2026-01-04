@@ -3,9 +3,16 @@ package com.pro.domain.activity.service.rule.impl;
 import com.pro.domain.activity.model.entity.ActivityCountEntity;
 import com.pro.domain.activity.model.entity.ActivityEntity;
 import com.pro.domain.activity.model.entity.ActivitySkuEntity;
+import com.pro.domain.activity.model.valobj.ActivitySkuStockKeyVO;
+import com.pro.domain.activity.repository.IActivityRepository;
+import com.pro.domain.activity.service.armory.IActivityDispatch;
 import com.pro.domain.activity.service.rule.AbstractActionChain;
+import com.pro.types.enums.ResponseCode;
+import com.pro.types.exception.AppException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+
+import javax.annotation.Resource;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥
@@ -15,11 +22,32 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component("activity_sku_stock_action")
 public class ActivitySkuStockActionChain extends AbstractActionChain {
+    @Resource
+    private IActivityDispatch activityDispatch;
+    @Resource
+    private IActivityRepository activityRepository;
 
+    /**
+     * 用户参与签到，就可以领取活动（需要扣减活动库存），之后通过活动抽奖
+     */
     @Override
-    public boolean action(ActivitySkuEntity activitySkuEntity, ActivityEntity activityEntity, ActivityCountEntity activityCountEntity) {
-        log.info("活动责任链-商品库存处理【校验&扣减】开始。");
-
+    public boolean action(ActivitySkuEntity activitySkuEntity, ActivityEntity activityEntity,
+                          ActivityCountEntity activityCountEntity) {
+        log.info("活动责任链-商品库存处理【有效期、状态、库存(sku)】开始。sku:{} activityId:{}",
+                activitySkuEntity.getSku(),
+                activityEntity.getActivityId());
+        // 扣减活动库存 raffle_activity_sku
+        boolean ststus = activityDispatch.subtractionActivitySkuStock(activitySkuEntity.getSku(), activityEntity.getEndDateTime());
+        if(!ststus){
+            throw new AppException(ResponseCode.ACTIVITY_SKU_STOCK_ERROR.getCode(), ResponseCode.ACTIVITY_SKU_STOCK_ERROR.getInfo());
+        }
+        log.info("活动责任链-商品库存扣减处理【有效期、状态、库存(sku)】成功。sku:{} activityId:{}", activitySkuEntity.getSku(),
+                activityEntity.getActivityId());
+        ActivitySkuStockKeyVO activitySkuStockKeyVO = ActivitySkuStockKeyVO.builder()
+                .activityId(activityEntity.getActivityId())
+                .sku(activitySkuEntity.getSku()).build();
+        // 扣减库存，发送库存延迟消息，由定时任务处理DB扣减
+        activityRepository.activitySkuStockConsumeSendQueue(activitySkuStockKeyVO);
         return true;
     }
 

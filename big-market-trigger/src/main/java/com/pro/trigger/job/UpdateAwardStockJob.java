@@ -21,7 +21,7 @@ public class UpdateAwardStockJob {
             log.info("定时任务，更新奖品消耗库存【延迟队列获取，降低对数据库的更新频次，不要产生竞争】");
             StrategyAwardStockKeyVO strategyAwardStockKeyVO = raffleStock.takeQueueValue();
             if(null == strategyAwardStockKeyVO) {
-                log.info("定时任务，获取队列数据为空");
+                log.info("UpdateAwardStockJob，获取队列数据为空");
                 return;
             }
             Long strategyId = strategyAwardStockKeyVO.getStrategyId();

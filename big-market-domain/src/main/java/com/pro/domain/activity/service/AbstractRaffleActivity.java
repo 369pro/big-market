@@ -1,6 +1,5 @@
 package com.pro.domain.activity.service;
 
-import com.alibaba.fastjson.JSON;
 import com.pro.domain.activity.model.aggregate.CreateOrderAggregate;
 import com.pro.domain.activity.model.entity.*;
 import com.pro.domain.activity.repository.IActivityRepository;
@@ -40,11 +39,11 @@ public abstract class AbstractRaffleActivity extends RaffleActivitySupport imple
         ActivityCountEntity activityCountEntity = 
                 queryRaffleActivityCountByActivityCountId(activitySkuEntity.getActivityCountId());
         IActionChain actionChain = defaultActivityChainFactory.openActionChain();
-        // 3. 活动动作规则校验 todo 后续处理规则过滤流程，暂时也不处理责任链结果
-        boolean success = actionChain.action(activitySkuEntity, activityEntity, activityCountEntity);
+        // 3. 活动动作规则校验【责任链】
+        actionChain.action(activitySkuEntity, activityEntity, activityCountEntity);
         // 4. 构建订单聚合对象
         CreateOrderAggregate createOrderAggregate = buildOrderAggregate(skuRechargeEntity, activitySkuEntity, activityEntity, activityCountEntity);
-        // 5. 保存订单
+        // 5. 保存订单，更新用户活动次数
         doSaveOrder(createOrderAggregate);
         // 6. 返回单号
         return createOrderAggregate.getActivityOrderEntity().getOrderId();
