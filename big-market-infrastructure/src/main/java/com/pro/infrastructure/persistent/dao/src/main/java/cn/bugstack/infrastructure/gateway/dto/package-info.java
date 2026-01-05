@@ -1,0 +1,1 @@
+package com.pro.infrastructure.persistent.dao.src.main.java.cn.bugstack.infrastructure.gateway.dto;

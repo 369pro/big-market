@@ -1,0 +1,1 @@
+package com.pro.infrastructure.persistent.po.src.main.java.cn.bugstack.infrastructure.gateway.adapter;
