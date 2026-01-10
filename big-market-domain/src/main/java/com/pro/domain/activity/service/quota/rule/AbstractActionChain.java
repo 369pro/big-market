@@ -1,4 +1,4 @@
-package com.pro.domain.activity.service.rule;
+package com.pro.domain.activity.service.quota.rule;
 
 public abstract class AbstractActionChain implements IActionChain{
     // 错飞了这样写，你就当成是一个链表就行

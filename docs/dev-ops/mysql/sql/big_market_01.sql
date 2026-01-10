@@ -7,7 +7,7 @@
 #
 # 主机: 127.0.0.1 (MySQL 5.6.39)
 # 数据库: big_market_01
-# 生成时间: 2024-04-03 07:23:12 +0000
+# 生成时间: 2024-04-06 08:41:52 +0000
 # ************************************************************
 
 
@@ -68,6 +68,11 @@ CREATE TABLE `raffle_activity_account_day` (
   UNIQUE KEY `uq_user_id_activity_id_day` (`user_id`,`activity_id`,`day`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='抽奖活动账户表-日次数';
 
+LOCK TABLES `raffle_activity_account_day` WRITE;
+/*!40000 ALTER TABLE `raffle_activity_account_day` DISABLE KEYS */;
+
+/*!40000 ALTER TABLE `raffle_activity_account_day` ENABLE KEYS */;
+UNLOCK TABLES;
 
 
 # 转储表 raffle_activity_account_month
@@ -88,6 +93,11 @@ CREATE TABLE `raffle_activity_account_month` (
   UNIQUE KEY `uq_user_id_activity_id_month` (`user_id`,`activity_id`,`month`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='抽奖活动账户表-月次数';
 
+LOCK TABLES `raffle_activity_account_month` WRITE;
+/*!40000 ALTER TABLE `raffle_activity_account_month` DISABLE KEYS */;
+
+/*!40000 ALTER TABLE `raffle_activity_account_month` ENABLE KEYS */;
+UNLOCK TABLES;
 
 
 # 转储表 raffle_activity_order_000
@@ -218,14 +228,24 @@ DROP TABLE IF EXISTS `task`;
 
 CREATE TABLE `task` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `user_id` varchar(32) NOT NULL COMMENT '用户ID',
   `topic` varchar(32) NOT NULL COMMENT '消息主题',
+  `message_id` varchar(11) DEFAULT NULL COMMENT '消息编号',
   `message` varchar(512) NOT NULL COMMENT '消息主体',
   `state` varchar(16) NOT NULL DEFAULT 'create' COMMENT '任务状态；create-创建、completed-完成、fail-失败',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_message_id` (`message_id`),
+  KEY `idx_state` (`state`),
+  KEY `idx_create_time` (`update_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='任务表，发送MQ';
 
+LOCK TABLES `task` WRITE;
+/*!40000 ALTER TABLE `task` DISABLE KEYS */;
+
+/*!40000 ALTER TABLE `task` ENABLE KEYS */;
+UNLOCK TABLES;
 
 
 # 转储表 user_award_record_000
@@ -278,6 +298,11 @@ CREATE TABLE `user_award_record_001` (
   KEY `idx_award_id` (`strategy_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户中奖记录表';
 
+LOCK TABLES `user_award_record_001` WRITE;
+/*!40000 ALTER TABLE `user_award_record_001` DISABLE KEYS */;
+
+/*!40000 ALTER TABLE `user_award_record_001` ENABLE KEYS */;
+UNLOCK TABLES;
 
 
 # 转储表 user_award_record_002
@@ -376,6 +401,11 @@ CREATE TABLE `user_raffle_order_001` (
   KEY `idx_user_id_activity_id` (`user_id`,`activity_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户抽奖订单表';
 
+LOCK TABLES `user_raffle_order_001` WRITE;
+/*!40000 ALTER TABLE `user_raffle_order_001` DISABLE KEYS */;
+
+/*!40000 ALTER TABLE `user_raffle_order_001` ENABLE KEYS */;
+UNLOCK TABLES;
 
 
 # 转储表 user_raffle_order_002

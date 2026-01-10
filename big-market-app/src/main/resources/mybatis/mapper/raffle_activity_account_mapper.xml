@@ -16,22 +16,13 @@
         <result column="update_time" property="updateTime"/>
     </resultMap>
 
-    <insert id="insertOrUpdate" parameterType="com.pro.infrastructure.persistent.po.RaffleActivityAccount">
+    <insert id="insert" parameterType="com.pro.infrastructure.persistent.po.RaffleActivityAccount">
         insert into raffle_activity_account
         (user_id, activity_id, total_count, total_count_surplus, day_count,
-         day_count_surplus, month_count, month_count_surplus, create_time, update_time)
+        day_count_surplus, month_count, month_count_surplus, create_time, update_time)
         values
-            (#{userId}, #{activityId}, #{totalCount}, #{totalCountSurplus}, #{dayCount},
-             #{dayCountSurplus}, #{monthCount}, #{monthCountSurplus}, now(), now())
-            ON DUPLICATE KEY UPDATE
-             /* 这里的逻辑通常是累加额度 */
-             total_count = total_count + VALUES(total_count),
-             total_count_surplus = total_count_surplus + VALUES(total_count_surplus),
-             day_count = day_count + VALUES(day_count),
-             day_count_surplus = day_count_surplus + VALUES(day_count_surplus),
-             month_count = month_count + VALUES(month_count),
-             month_count_surplus = month_count_surplus + VALUES(month_count_surplus),
-             update_time = now()
+        (#{userId}, #{activityId}, #{totalCount}, #{totalCountSurplus}, #{dayCount},
+         #{dayCountSurplus}, #{monthCount}, #{monthCountSurplus}, now(), now())
     </insert>
 
     <update id="updateAccountQuota" parameterType="com.pro.infrastructure.persistent.po.RaffleActivityAccount">
@@ -44,6 +35,34 @@
             month_count_surplus = month_count_surplus + #{monthCountSurplus},
             month_count = month_count + #{monthCount},
             update_time = now()
+        where user_id = #{userId} and activity_id = #{activityId}
+    </update>
+
+    <select id="queryActivityAccountByUserId" parameterType="com.pro.infrastructure.persistent.po.RaffleActivityAccount" resultMap="dataMap">
+        select user_id, activity_id, total_count, total_count_surplus, day_count,
+        day_count_surplus, month_count, month_count_surplus
+        from raffle_activity_account
+        where user_id = #{userId} and activity_id = #{activityId}
+    </select>
+
+    <update id="updateActivityAccountSubtractionQuota" parameterType="com.pro.infrastructure.persistent.po.RaffleActivityAccount">
+        update raffle_activity_account
+        set total_count_surplus = total_count_surplus - 1,
+            day_count_surplus = day_count_surplus - 1,
+            month_count_surplus = month_count_surplus - 1,
+            update_time = now()
+        where user_id = #{userId} and activity_id = #{activityId} and total_count_surplus > 0 and day_count_surplus > 0 and month_count_surplus > 0
+    </update>
+
+    <update id="updateActivityAccountMonthSurplusImageQuota" parameterType="com.pro.infrastructure.persistent.po.RaffleActivityAccount">
+        update raffle_activity_account
+        set month_count_surplus = #{monthCountSurplus} - 1, update_time = now()
+        where user_id = #{userId} and activity_id = #{activityId}
+    </update>
+
+    <update id="updateActivityAccountDaySurplusImageQuota" parameterType="com.pro.infrastructure.persistent.po.RaffleActivityAccountDay">
+        update raffle_activity_account
+        set day_count_surplus = #{dayCountSurplus} - 1, update_time = now()
         where user_id = #{userId} and activity_id = #{activityId}
     </update>
 
