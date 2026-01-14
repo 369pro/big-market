@@ -22,7 +22,7 @@ public class UpdateActivitySkuStockJob {
     @Scheduled(cron = "0/2 * * * * ?")
     public void exec() {
         try {
-            log.info("定时任务，更新活动sku库存【延迟队列获取，降低对数据库的更新频次，不要产生竞争】");
+            // log.info("定时任务，更新活动sku库存【延迟队列获取，降低对数据库的更新频次，不要产生竞争】");
             ActivitySkuStockKeyVO activitySkuStockKeyVO = skuStock.takeQueueValue();
             if (null == activitySkuStockKeyVO) {
                 log.info("UpdateActivitySkuStockJob，获取队列数据为空");

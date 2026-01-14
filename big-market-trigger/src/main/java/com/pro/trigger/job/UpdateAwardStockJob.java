@@ -18,7 +18,7 @@ public class UpdateAwardStockJob {
     @Scheduled(cron = "0 * * * * ?")
     public void exec() {
         try {
-            log.info("定时任务，更新奖品消耗库存【延迟队列获取，降低对数据库的更新频次，不要产生竞争】");
+            // log.info("定时任务，更新奖品消耗库存【延迟队列获取，降低对数据库的更新频次，不要产生竞争】");
             StrategyAwardStockKeyVO strategyAwardStockKeyVO = raffleStock.takeQueueValue();
             if(null == strategyAwardStockKeyVO) {
                 log.info("UpdateAwardStockJob，获取队列数据为空");
