@@ -24,7 +24,9 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.annotation.Resource;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -210,22 +212,22 @@ public class ActivityRepository implements IActivityRepository {
 
     @Override
     public void activitySkuStockConsumeSendQueue(ActivitySkuStockKeyVO activitySkuStockKeyVO) {
-        String cacheKey = Constants.RedisKey.ACTIVITY_SKU_COUNT_QUERY_KEY;
+        String cacheKey = Constants.RedisKey.ACTIVITY_SKU_COUNT_QUERY_KEY + activitySkuStockKeyVO.getSku();
         RBlockingQueue<ActivitySkuStockKeyVO> blockingQueue = redisService.getBlockingQueue(cacheKey);
         RDelayedQueue<ActivitySkuStockKeyVO> delayedQueue = redisService.getDelayedQueue(blockingQueue);
         delayedQueue.offer(activitySkuStockKeyVO, 3, TimeUnit.SECONDS);
     }
 
     @Override
-    public ActivitySkuStockKeyVO takeQueueValue() {
-        String cacheKey = Constants.RedisKey.ACTIVITY_SKU_COUNT_QUERY_KEY;
+    public ActivitySkuStockKeyVO takeQueueValue(Long sku) {
+        String cacheKey = Constants.RedisKey.ACTIVITY_SKU_COUNT_QUERY_KEY + sku;
         RBlockingQueue<ActivitySkuStockKeyVO> destinationQueue = redisService.getBlockingQueue(cacheKey);
         return destinationQueue.poll();
     }
 
     @Override
-    public void clearQueueValue() {
-        String cacheKey = Constants.RedisKey.ACTIVITY_SKU_COUNT_QUERY_KEY;
+    public void clearQueueValue(Long sku) {
+        String cacheKey = Constants.RedisKey.ACTIVITY_SKU_COUNT_QUERY_KEY + sku;
         RBlockingQueue<ActivitySkuStockKeyVO> destinationQueue = redisService.getBlockingQueue(cacheKey);
         destinationQueue.clear();
     }
@@ -430,4 +432,18 @@ public class ActivityRepository implements IActivityRepository {
         }
     }
 
+    @Override
+    public List<ActivitySkuEntity> queryActivitySkuListByActivityId(Long activityId) {
+        List<RaffleActivitySku> raffleActivitySkus = raffleActivitySkuDao.queryActivitySkuListByActivityId(activityId);
+        List<ActivitySkuEntity> activitySkuEntities = new ArrayList<>(raffleActivitySkus.size());
+        for (RaffleActivitySku raffleActivitySku:raffleActivitySkus){
+            ActivitySkuEntity activitySkuEntity = new ActivitySkuEntity();
+            activitySkuEntity.setSku(raffleActivitySku.getSku());
+            activitySkuEntity.setActivityCountId(raffleActivitySku.getActivityCountId());
+            activitySkuEntity.setStockCount(raffleActivitySku.getStockCount());
+            activitySkuEntity.setStockCountSurplus(raffleActivitySku.getStockCountSurplus());
+            activitySkuEntities.add(activitySkuEntity);
+        }
+        return activitySkuEntities;
+    }
 }

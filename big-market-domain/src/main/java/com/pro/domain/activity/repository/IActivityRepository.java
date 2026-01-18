@@ -7,6 +7,7 @@ import com.pro.domain.activity.model.entity.*;
 import com.pro.domain.activity.model.valobj.ActivitySkuStockKeyVO;
 
 import java.util.Date;
+import java.util.List;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥
@@ -29,9 +30,9 @@ public interface IActivityRepository {
 
     void activitySkuStockConsumeSendQueue(ActivitySkuStockKeyVO activitySkuStockKeyVO);
 
-    ActivitySkuStockKeyVO takeQueueValue();
+    ActivitySkuStockKeyVO takeQueueValue(Long sku);
 
-    void clearQueueValue();
+    void clearQueueValue(Long sku);
 
     void updateActivitySkuStock(Long sku);
 
@@ -47,4 +48,5 @@ public interface IActivityRepository {
 
     void saveCreatePartakeOrderAggregate(CreatePartakeOrderAggregate createPartakeOrderAggregate);
 
+    List<ActivitySkuEntity> queryActivitySkuListByActivityId(Long activityId);
 }

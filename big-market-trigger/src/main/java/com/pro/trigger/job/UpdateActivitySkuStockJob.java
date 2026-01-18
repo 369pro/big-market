@@ -2,11 +2,13 @@ package com.pro.trigger.job;
 
 import com.pro.domain.activity.model.valobj.ActivitySkuStockKeyVO;
 import com.pro.domain.activity.service.IRaffleActivitySkuStockService;
+import com.pro.infrastructure.persistent.dao.IRaffleActivitySkuDao;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import java.util.List;
 
 /**
  * @author 369pro
@@ -18,21 +20,25 @@ import javax.annotation.Resource;
 public class UpdateActivitySkuStockJob {
     @Resource
     private IRaffleActivitySkuStockService skuStock;
+    @Resource
+    private IRaffleActivitySkuDao raffleActivitySkuDao;
 
     @Scheduled(cron = "0/2 * * * * ?")
     public void exec() {
         try {
             // log.info("定时任务，更新活动sku库存【延迟队列获取，降低对数据库的更新频次，不要产生竞争】");
-            ActivitySkuStockKeyVO activitySkuStockKeyVO = skuStock.takeQueueValue();
-            if (null == activitySkuStockKeyVO) {
-                log.info("UpdateActivitySkuStockJob，获取队列数据为空");
-                return;
+            List<Long> skuList = raffleActivitySkuDao.listSku();
+            for(Long sku : skuList){
+                ActivitySkuStockKeyVO activitySkuStockKeyVO = skuStock.takeQueueValue(sku);
+                if (null == activitySkuStockKeyVO) {
+                    continue;
+                }
+                log.info("UpdateActivitySkuStockJob，更新活动sku库存 sku:{} activityId:{}",
+                        activitySkuStockKeyVO.getSku(), activitySkuStockKeyVO.getActivityId());
+                skuStock.updateActivitySkuStock(activitySkuStockKeyVO.getSku());
             }
-            log.info("定时任务，更新活动sku库存 sku:{} activityId:{}",
-                    activitySkuStockKeyVO.getSku(), activitySkuStockKeyVO.getActivityId());
-            skuStock.updateActivitySkuStock(activitySkuStockKeyVO.getSku());
         }catch (Exception e) {
-            log.error("定时任务，更新活动sku库存失败", e);
+            log.error("UpdateActivitySkuStockJob，更新活动sku库存失败", e);
         }
     }
 }

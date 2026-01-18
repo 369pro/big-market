@@ -28,6 +28,14 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
     private IStrategyRepository repository;
 
     private final SecureRandom secureRandom = new SecureRandom();
+
+
+    @Override
+    public boolean assembleLotteryStrategyByActivityId(Long activityId) {
+        Long strategyId = repository.queryStrategyIdByActivityId(activityId);
+        return assembleLotteryStrategy(strategyId);
+    }
+
     /**
      * 4000:102,103,104,105 5000:102,103,104,105,106,107 6000:102,103,104,105,106,107,108,109
      * @param strategyId 策略ID
@@ -47,7 +55,7 @@ public class StrategyArmoryDispatch implements IStrategyArmory, IStrategyDispatc
             cacheStrategyAwardCount(strategyId, awardId, awardCount);
         }
 
-        // 3.1 默认装配配置【全量抽奖概率】<strategyId,StrategyAwardEntity>
+        // 3.1 默认装配配置【全量抽奖概率】<strategyId,StrategyAwardEntity> 装配最开始的抽奖表格
         assembleLotteryStrategy(String.valueOf(strategyId), strategyAwardEntities);
         // 3.2 查询权重配置--适用于 rule_weight 权重规则配置
         StrategyEntity strategyEntity = repository.queryStrategyEntityByStrategyId(strategyId);

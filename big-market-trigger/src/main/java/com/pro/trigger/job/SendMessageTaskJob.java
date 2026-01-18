@@ -27,7 +27,7 @@ public class SendMessageTaskJob {
     @Resource
     private IDBRouterStrategy dbRouter;
 
-    @Scheduled(cron = "0/5 * * * * ?")
+    @Scheduled(cron = "0/10 * * * * ?")
     public void exec() {
         try{
             // 获取分库的数量

@@ -1,5 +1,6 @@
 package com.pro.domain.strategy.service.rule.tree.impl;
 
+import com.pro.domain.strategy.model.entity.StrategyEntity;
 import com.pro.domain.strategy.model.valobj.RuleLogicCheckTypeVO;
 import com.pro.domain.strategy.repository.IStrategyRepository;
 import com.pro.domain.strategy.service.rule.tree.ILogicTreeNode;
@@ -17,8 +18,10 @@ import javax.annotation.Resource;
 @Slf4j
 @Component("rule_lock")
 public class RuleLockLogicTreeNode implements ILogicTreeNode {
-    // 用户抽奖次数，后续完成这部分流程开发的时候，从数据库/Redis中读取
-    private Long userRaffleCount = 0L;
+//    // 用户抽奖次数，后续完成这部分流程开发的时候，从数据库/Redis中读取
+//    private Long userRaffleCount = 0L;
+    @Resource
+    private IStrategyRepository repository;
 
     @Override
     public DefaultTreeFactory.TreeActionEntity logic(
@@ -30,6 +33,8 @@ public class RuleLockLogicTreeNode implements ILogicTreeNode {
         } catch (NumberFormatException e) {
             throw new RuntimeException("规则过滤-次数锁异常 ruleValue: " + ruleValue + " 配置不正确");
         }
+        // 查询用户抽奖次数 - 当天的；策略ID:活动ID 1:1 的配置，可以直接用 strategyId 查询。
+        Integer userRaffleCount = repository.queryTodayUserRaffleCount(userId, strategyId);
         // 用户抽奖次数大于规则限定值，规则放行
         if (userRaffleCount >= raffleCount) {
             return DefaultTreeFactory.TreeActionEntity.builder()

@@ -22,6 +22,14 @@ public abstract class AbstractRaffleActivityPartake implements IRaffleActivityPa
     }
 
     @Override
+    public UserRaffleOrderEntity createOrder(String userId, Long activityId) {
+        return createOrder(PartakeRaffleActivityEntity.builder()
+                .userId(userId)
+                .activityId(activityId)
+                .build());
+    }
+
+    @Override
     public UserRaffleOrderEntity createOrder(PartakeRaffleActivityEntity partakeRaffleActivityEntity) {
         // 基础信息
         String userId = partakeRaffleActivityEntity.getUserId();
@@ -38,7 +46,7 @@ public abstract class AbstractRaffleActivityPartake implements IRaffleActivityPa
             throw new AppException(ResponseCode.ACTIVITY_DATE_ERROR.getCode(), ResponseCode.ACTIVITY_DATE_ERROR.getInfo());
         }
 
-        // 2. 查询未被使用的 活动参与订单记录【这里是用户利用活动进行 抽奖的下单记录】
+        // 2. 查询未被使用的 活动参与订单记录【这里是用户利用活动进行 【抽奖的下单记录】
         UserRaffleOrderEntity userRaffleOrderEntity = activityRepository.queryNoUsedRaffleOrder(partakeRaffleActivityEntity);
         if (null != userRaffleOrderEntity) {
             log.info("创建参与活动订单 userId:{} activityId:{} userRaffleOrderEntity:{}", userId, activityId, JSON.toJSONString(userRaffleOrderEntity));
