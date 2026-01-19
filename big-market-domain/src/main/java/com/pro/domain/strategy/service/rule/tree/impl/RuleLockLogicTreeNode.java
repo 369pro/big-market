@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import java.util.Date;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥
@@ -24,8 +25,8 @@ public class RuleLockLogicTreeNode implements ILogicTreeNode {
     private IStrategyRepository repository;
 
     @Override
-    public DefaultTreeFactory.TreeActionEntity logic(
-            String userId, Long strategyId, Integer awardId, String ruleValue) {
+    public DefaultTreeFactory.TreeActionEntity logic(String userId, Long strategyId,
+                                                     Integer awardId, String ruleValue, Date endDateTime) {
         log.info("rule-lock:规则过滤-次数锁 userId:{} strategyId:{} awardId:{}",userId, strategyId, awardId);
         long raffleCount = 0L;
         try {

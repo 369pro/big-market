@@ -1,5 +1,7 @@
 package com.pro.domain.strategy.service.armory;
 
+import java.util.Date;
+
 public interface IStrategyDispatch {
     /**
      * 获取抽奖策略装配的随机结果
@@ -19,4 +21,6 @@ public interface IStrategyDispatch {
      * @return 扣减结果
      */
     Boolean subtractionAwardStock(Long strategyId, Integer awardId);
+
+    Boolean subtractionAwardStock(Long strategyId, Integer awardId, Date endDateTime);
 }
