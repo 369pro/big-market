@@ -35,10 +35,9 @@ public class ActivityArmory implements IActivityArmory, IActivityDispatch{
         // 一个活动有多种获取次数方式比如 签到，做任务。。。
         for (ActivitySkuEntity activitySkuEntity : activitySkuEntities) {
             cacheActivitySkuStockCount(activitySkuEntity.getSku(), activitySkuEntity.getStockCountSurplus());
-            // 预热活动次数【查询时预热到缓存】
+            // 预热活动次数【查询时预热到缓存】 todo 这里什么时候用到
             activityRepository.queryRaffleActivityCountByActivityCountId(activitySkuEntity.getActivityCountId());
         }
-        // todo 这里不理解为什么不直接遍历 activitySkuEntities
         // 这里 activityId都是一样的
         // 预热活动【查询时预热到缓存】
         activityRepository.queryRaffleActivityByActivityId(activityId);
