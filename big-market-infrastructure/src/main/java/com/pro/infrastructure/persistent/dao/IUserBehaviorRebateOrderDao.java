@@ -2,8 +2,11 @@ package com.pro.infrastructure.persistent.dao;
 
 
 import cn.bugstack.middleware.db.router.annotation.DBRouterStrategy;
+import com.pro.domain.rebate.model.entity.BehaviorRebateOrderEntity;
 import com.pro.infrastructure.persistent.po.UserBehaviorRebateOrder;
 import org.apache.ibatis.annotations.Mapper;
+
+import java.util.List;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥
@@ -16,4 +19,5 @@ public interface IUserBehaviorRebateOrderDao {
 
     void insert(UserBehaviorRebateOrder userBehaviorRebateOrder);
 
+    List<BehaviorRebateOrderEntity> queryOrderByOutBusinessNo(String userId, String outBusinessNo);
 }

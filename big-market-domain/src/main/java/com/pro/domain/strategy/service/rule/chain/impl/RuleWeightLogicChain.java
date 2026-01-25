@@ -22,7 +22,7 @@ public class RuleWeightLogicChain extends AbstractLogicChain {
     @Resource
     private IStrategyDispatch strategyDispatch;
 
-    public Long userScore = 0L;
+//    public Long userScore = 0L;
 
     /**
      * 虽然 AbstractLogicChain 是抽象类,但它实现了 ILogicChain 接口却没有实现 logic 方法。这意味着:
@@ -47,6 +47,7 @@ public class RuleWeightLogicChain extends AbstractLogicChain {
         // 2. 转换Keys值，并默认排序
         List<Long> analyticalSortedKeys = new ArrayList<>(analyticalValueGroup.keySet());
         Collections.sort(analyticalSortedKeys);
+        Integer userScore = repository.queryActivityAccountTotalUseCount(userId, strategyId);
         Long nextValue = analyticalSortedKeys.stream()
                 .sorted(Comparator.reverseOrder())
                 .filter(sc -> userScore >= sc)

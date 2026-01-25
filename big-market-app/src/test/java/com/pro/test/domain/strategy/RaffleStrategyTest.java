@@ -1,8 +1,11 @@
 package com.pro.test.domain.strategy;
+
 import com.alibaba.fastjson.JSON;
 import com.pro.domain.strategy.model.entity.RaffleAwardEntity;
 import com.pro.domain.strategy.model.entity.RaffleFactorEntity;
+import com.pro.domain.strategy.model.valobj.RuleWeightVO;
 import com.pro.domain.strategy.model.valobj.StrategyAwardStockKeyVO;
+import com.pro.domain.strategy.service.IRaffleRule;
 import com.pro.domain.strategy.service.IRaffleStock;
 import com.pro.domain.strategy.service.IRaffleStrategy;
 import com.pro.domain.strategy.service.armory.IStrategyArmory;
@@ -14,9 +17,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import javax.annotation.Resource;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 /**
@@ -29,6 +32,8 @@ import java.util.concurrent.CountDownLatch;
 @SpringBootTest
 public class RaffleStrategyTest {
 
+    @Resource
+    private IRaffleRule raffleRule;
     @Resource
     private IStrategyArmory strategyArmory;
     @Resource
@@ -50,8 +55,8 @@ public class RaffleStrategyTest {
         log.info("测试结果：{}", strategyArmory.assembleLotteryStrategy(100006L));
 
         // 通过反射 mock 规则中的值
-        ReflectionTestUtils.setField(ruleWeightLogicChain, "userScore", 4900L);
-        ReflectionTestUtils.setField(ruleLockLogicTreeNode, "userRaffleCount", 10L);
+//        ReflectionTestUtils.setField(ruleWeightLogicChain, "userScore", 4900L);
+//        ReflectionTestUtils.setField(ruleLockLogicTreeNode, "userRaffleCount", 10L);
     }
 
     @Test
@@ -108,4 +113,9 @@ public class RaffleStrategyTest {
         log.info("测试结果：{}", JSON.toJSONString(strategyAwardStockKeyVO));
     }
 
+    @Test
+    public void test_raffleRule() {
+        List<RuleWeightVO> ruleWeightVOS = raffleRule.queryAwardRuleWeightByActivityId(100301L);
+        log.info("测试结果：{}", JSON.toJSONString(ruleWeightVOS));
+    }
 }

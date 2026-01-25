@@ -4,6 +4,8 @@ import com.alibaba.fastjson.JSON;
 import com.pro.trigger.api.IRaffleActivityService;
 import com.pro.trigger.api.dto.ActivityDrawRequestDTO;
 import com.pro.trigger.api.dto.ActivityDrawResponseDTO;
+import com.pro.trigger.api.dto.UserActivityAccountRequestDTO;
+import com.pro.trigger.api.dto.UserActivityAccountResponseDTO;
 import com.pro.types.model.Response;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
@@ -51,4 +53,16 @@ public class RaffleActivityControllerTest {
         log.info("测试结果：{}", JSON.toJSONString(response));
     }
 
+    @Test
+    public void test_queryUserActivityAccount() {
+        UserActivityAccountRequestDTO request = new UserActivityAccountRequestDTO();
+        request.setActivityId(100301L);
+        request.setUserId("xiaofuge");
+
+        // 查询数据
+        Response<UserActivityAccountResponseDTO> response = raffleActivityService.queryUserActivityAccount(request);
+
+        log.info("请求参数：{}", JSON.toJSONString(request));
+        log.info("测试结果：{}", JSON.toJSONString(response));
+    }
 }
