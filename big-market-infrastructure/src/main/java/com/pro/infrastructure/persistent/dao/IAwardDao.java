@@ -2,7 +2,6 @@ package com.pro.infrastructure.persistent.dao;
 
 import com.pro.infrastructure.persistent.po.Award;
 import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
 
@@ -16,4 +15,7 @@ public interface IAwardDao {
     // @Select("SELECT * FROM award")
     List<Award> queryAwardList();
 
+    String queryAwardConfigByAwardId(Integer awardId);
+
+    String queryAwardKeyByAwardId(Integer awardId);
 }

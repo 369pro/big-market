@@ -7,7 +7,7 @@
 #
 # 主机: 127.0.0.1 (MySQL 5.6.39)
 # 数据库: big_market_01
-# 生成时间: 2024-05-03 08:37:02 +0000
+# 生成时间: 2024-05-25 02:56:28 +0000
 # ************************************************************
 
 
@@ -190,6 +190,11 @@ CREATE TABLE `raffle_activity_order_002` (
   KEY `idx_user_id_activity_id` (`user_id`,`activity_id`,`state`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='抽奖活动单';
 
+LOCK TABLES `raffle_activity_order_002` WRITE;
+/*!40000 ALTER TABLE `raffle_activity_order_002` DISABLE KEYS */;
+
+/*!40000 ALTER TABLE `raffle_activity_order_002` ENABLE KEYS */;
+UNLOCK TABLES;
 
 
 # 转储表 raffle_activity_order_003
@@ -329,6 +334,11 @@ CREATE TABLE `user_award_record_002` (
   KEY `idx_award_id` (`strategy_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户中奖记录表';
 
+LOCK TABLES `user_award_record_002` WRITE;
+/*!40000 ALTER TABLE `user_award_record_002` DISABLE KEYS */;
+
+/*!40000 ALTER TABLE `user_award_record_002` ENABLE KEYS */;
+UNLOCK TABLES;
 
 
 # 转储表 user_award_record_003
@@ -435,6 +445,11 @@ CREATE TABLE `user_behavior_rebate_order_002` (
   KEY `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户行为返利流水订单表';
 
+LOCK TABLES `user_behavior_rebate_order_002` WRITE;
+/*!40000 ALTER TABLE `user_behavior_rebate_order_002` DISABLE KEYS */;
+
+/*!40000 ALTER TABLE `user_behavior_rebate_order_002` ENABLE KEYS */;
+UNLOCK TABLES;
 
 
 # 转储表 user_behavior_rebate_order_003
@@ -460,6 +475,29 @@ CREATE TABLE `user_behavior_rebate_order_003` (
   KEY `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户行为返利流水订单表';
 
+
+
+# 转储表 user_credit_account
+# ------------------------------------------------------------
+
+DROP TABLE IF EXISTS `user_credit_account`;
+
+CREATE TABLE `user_credit_account` (
+  `id` bigint(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `user_id` varchar(32) NOT NULL COMMENT '用户ID',
+  `total_amount` decimal(10,2) NOT NULL COMMENT '总积分，显示总账户值，记得一个人获得的总积分',
+  `available_amount` decimal(10,2) NOT NULL COMMENT '可用积分，每次扣减的值',
+  `account_status` varchar(8) NOT NULL COMMENT '账户状态【open - 可用，close - 冻结】',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户积分账户';
+
+LOCK TABLES `user_credit_account` WRITE;
+/*!40000 ALTER TABLE `user_credit_account` DISABLE KEYS */;
+
+/*!40000 ALTER TABLE `user_credit_account` ENABLE KEYS */;
+UNLOCK TABLES;
 
 
 # 转储表 user_raffle_order_000
@@ -534,6 +572,11 @@ CREATE TABLE `user_raffle_order_002` (
   KEY `idx_user_id_activity_id` (`user_id`,`activity_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户抽奖订单表';
 
+LOCK TABLES `user_raffle_order_002` WRITE;
+/*!40000 ALTER TABLE `user_raffle_order_002` DISABLE KEYS */;
+
+/*!40000 ALTER TABLE `user_raffle_order_002` ENABLE KEYS */;
+UNLOCK TABLES;
 
 
 # 转储表 user_raffle_order_003

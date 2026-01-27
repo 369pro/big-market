@@ -1,6 +1,7 @@
 package com.pro.domain.award.service;
 
 
+import com.pro.domain.award.model.entity.DistributeAwardEntity;
 import com.pro.domain.award.model.entity.UserAwardRecordEntity;
 
 /**
@@ -12,4 +13,5 @@ public interface IAwardService {
 
     void saveUserAwardRecord(UserAwardRecordEntity userAwardRecordEntity);
 
+    void distributeAward(DistributeAwardEntity distributeAwardEntity);
 }

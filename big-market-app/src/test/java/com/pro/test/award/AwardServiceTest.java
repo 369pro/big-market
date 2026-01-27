@@ -1,5 +1,6 @@
 package com.pro.test.award;
 
+import com.pro.domain.award.model.entity.DistributeAwardEntity;
 import com.pro.domain.award.model.entity.UserAwardRecordEntity;
 import com.pro.domain.award.model.valobj.AwardStateVO;
 import com.pro.domain.award.service.IAwardService;
@@ -49,4 +50,14 @@ public class AwardServiceTest {
         new CountDownLatch(1).await();
     }
 
+    @Test
+    public void test_distributeAward() throws InterruptedException {
+        DistributeAwardEntity distributeAwardEntity = new DistributeAwardEntity();
+        distributeAwardEntity.setUserId("xiaofuge");
+        distributeAwardEntity.setOrderId("313091076459");
+        distributeAwardEntity.setAwardId(101);
+        distributeAwardEntity.setAwardConfig("0.01,1"); // 0.01,1 黑名单指定积分值
+
+        awardService.distributeAward(distributeAwardEntity);
+    }
 }
