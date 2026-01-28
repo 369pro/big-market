@@ -22,7 +22,7 @@ public class Constants {
         public static String STRATEGY_AWARD_COUNT_QUERY_KEY = "strategy_award_count_query_key";
         public static String ACTIVITY_SKU_COUNT_QUERY_KEY = "activity_sku_count_query_key";
         public static String ACTIVITY_SKU_STOCK_COUNT_KEY = "activity_sku_stock_count_key_";
-
+        public static String ACTIVITY_ACCOUNT_LOCK = "activity_account_lock_";
     }
 
 }
