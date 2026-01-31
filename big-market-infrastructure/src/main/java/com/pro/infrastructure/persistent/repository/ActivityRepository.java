@@ -129,7 +129,6 @@ public class ActivityRepository implements IActivityRepository {
         RLock lock = redisService.getLock(Constants.RedisKey.ACTIVITY_ACCOUNT_LOCK +
                 createOrderAggregate.getUserId() + Constants.UNDERLINE + createOrderAggregate.getActivityId());
         try {
-            lock.lock(3, TimeUnit.SECONDS);
             // 订单对象
             ActivityOrderEntity activityOrderEntity = createOrderAggregate.getActivityOrderEntity();
             RaffleActivityOrder raffleActivityOrder = new RaffleActivityOrder();
@@ -176,6 +175,7 @@ public class ActivityRepository implements IActivityRepository {
             raffleActivityAccountDay.setDayCount(createOrderAggregate.getDayCount());
             raffleActivityAccountDay.setDayCountSurplus(createOrderAggregate.getDayCount());
 
+            lock.lock(3, TimeUnit.SECONDS);
             // 以用户ID作为切分键，通过 doRouter 设定路由【这样就保证了下面的操作，都是同一个链接下，也就保证了事务的特性】
             dbRouter.doRouter(createOrderAggregate.getUserId());
             // 编程式事务
