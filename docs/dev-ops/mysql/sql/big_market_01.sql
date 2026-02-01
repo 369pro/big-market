@@ -7,7 +7,7 @@
 #
 # 主机: 127.0.0.1 (MySQL 5.6.39)
 # 数据库: big_market_01
-# 生成时间: 2024-06-01 03:05:10 +0000
+# 生成时间: 2024-06-09 02:47:24 +0000
 # ************************************************************
 
 
@@ -117,6 +117,7 @@ CREATE TABLE `raffle_activity_order_000` (
   `total_count` int(8) NOT NULL COMMENT '总次数',
   `day_count` int(8) NOT NULL COMMENT '日次数',
   `month_count` int(8) NOT NULL COMMENT '月次数',
+  `pay_amount` decimal(10,2) DEFAULT NULL COMMENT '支付金额【积分】',
   `state` varchar(16) NOT NULL DEFAULT 'complete' COMMENT '订单状态（complete）',
   `out_business_no` varchar(64) NOT NULL COMMENT '业务仿重ID - 外部透传的，确保幂等',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -146,6 +147,7 @@ CREATE TABLE `raffle_activity_order_001` (
   `total_count` int(8) NOT NULL COMMENT '总次数',
   `day_count` int(8) NOT NULL COMMENT '日次数',
   `month_count` int(8) NOT NULL COMMENT '月次数',
+  `pay_amount` decimal(10,2) DEFAULT NULL COMMENT '支付金额【积分】',
   `state` varchar(16) NOT NULL DEFAULT 'complete' COMMENT '订单状态（complete）',
   `out_business_no` varchar(64) NOT NULL COMMENT '业务仿重ID - 外部透传的，确保幂等',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -180,6 +182,7 @@ CREATE TABLE `raffle_activity_order_002` (
   `total_count` int(8) NOT NULL COMMENT '总次数',
   `day_count` int(8) NOT NULL COMMENT '日次数',
   `month_count` int(8) NOT NULL COMMENT '月次数',
+  `pay_amount` decimal(10,2) DEFAULT NULL COMMENT '支付金额【积分】',
   `state` varchar(16) NOT NULL DEFAULT 'complete' COMMENT '订单状态（complete）',
   `out_business_no` varchar(64) NOT NULL COMMENT '业务仿重ID - 外部透传的，确保幂等',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -214,6 +217,7 @@ CREATE TABLE `raffle_activity_order_003` (
   `total_count` int(8) NOT NULL COMMENT '总次数',
   `day_count` int(8) NOT NULL COMMENT '日次数',
   `month_count` int(8) NOT NULL COMMENT '月次数',
+  `pay_amount` decimal(10,2) DEFAULT NULL COMMENT '支付金额【积分】',
   `state` varchar(16) NOT NULL DEFAULT 'complete' COMMENT '订单状态（complete）',
   `out_business_no` varchar(64) NOT NULL COMMENT '业务仿重ID - 外部透传的，确保幂等',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',

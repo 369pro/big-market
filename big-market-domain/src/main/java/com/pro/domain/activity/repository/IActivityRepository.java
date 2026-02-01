@@ -21,8 +21,10 @@ public interface IActivityRepository {
     ActivityEntity queryRaffleActivityByActivityId(Long activityId);
 
     ActivityCountEntity queryRaffleActivityCountByActivityCountId(Long activityCountId);
-
-    void doSaveOrder(CreateQuotaOrderAggregate createQuotaOrderAggregate);
+    // 用户签到领取活动，不需要支付创建活动订单
+    void doSaveNoPayOrder(CreateQuotaOrderAggregate createOrderAggregate);
+    // 利用积分兑换领取活动
+    void doSaveCreditPayOrder(CreateQuotaOrderAggregate createQuotaOrderAggregate);
 
     void cacheActivitySkuStockCount(String cacheKey, Integer stockCount);
 
@@ -55,4 +57,6 @@ public interface IActivityRepository {
     ActivityAccountEntity queryActivityAccountEntity(Long activityId, String userId);
 
     Integer queryRaffleActivityAccountPartakeCount(Long activityId, String userId);
+
+    void updateOrder(DeliveryOrderEntity deliveryOrderEntity);
 }

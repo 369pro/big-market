@@ -1,11 +1,13 @@
 package com.pro.infrastructure.persistent.dao;
 
-import cn.bugstack.middleware.db.router.annotation.DBRouter;
-import cn.bugstack.middleware.db.router.annotation.DBRouterStrategy;
-import com.pro.infrastructure.persistent.po.RaffleActivityOrder;
+import java.util.List;
+
 import org.apache.ibatis.annotations.Mapper;
 
-import java.util.List;
+import com.pro.infrastructure.persistent.po.RaffleActivityOrder;
+
+import cn.bugstack.middleware.db.router.annotation.DBRouter;
+import cn.bugstack.middleware.db.router.annotation.DBRouterStrategy;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥
@@ -19,7 +21,12 @@ public interface IRaffleActivityOrderDao {
     @DBRouter(key = "userId")
     void insert(RaffleActivityOrder raffleActivityOrder);
 
-    @DBRouter(key = "userId")
+    @DBRouter
     List<RaffleActivityOrder> queryRaffleActivityOrderByUserId(String userId);
+
+    @DBRouter
+    RaffleActivityOrder queryRaffleActivityOrder(RaffleActivityOrder raffleActivityOrderReq);
+    @DBRouter
+    int updateOrderCompleted(RaffleActivityOrder raffleActivityOrderReq);
 
 }

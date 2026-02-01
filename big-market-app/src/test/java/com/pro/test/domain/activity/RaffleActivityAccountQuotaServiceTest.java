@@ -1,6 +1,7 @@
 package com.pro.test.domain.activity;
 
 import com.pro.domain.activity.model.entity.SkuRechargeEntity;
+import com.pro.domain.activity.model.valobj.OrderTradeTypeVO;
 import com.pro.domain.activity.service.IRaffleActivityAccountQuotaService;
 import com.pro.domain.activity.service.armory.IActivityArmory;
 import com.pro.types.exception.AppException;
@@ -17,16 +18,17 @@ import java.util.concurrent.CountDownLatch;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥
- * @description 抽奖活动订单单测
- * @create 2024-03-16 11:51
+ * @description 抽奖活动参与服务测试
+ * @create 2024-04-05 12:28
  */
 @Slf4j
 @RunWith(SpringRunner.class)
 @SpringBootTest
 public class RaffleActivityAccountQuotaServiceTest {
 
+
     @Resource
-    private IRaffleActivityAccountQuotaService raffleOrder;
+    private IRaffleActivityAccountQuotaService raffleActivityAccountQuotaService;
     @Resource
     private IActivityArmory activityArmory;
 
@@ -41,8 +43,9 @@ public class RaffleActivityAccountQuotaServiceTest {
         skuRechargeEntity.setUserId("xiaofuge");
         skuRechargeEntity.setSku(9011L);
         // outBusinessNo 作为幂等仿重使用，同一个业务单号2次使用会抛出索引冲突 Duplicate entry '700091009111' for key 'uq_out_business_no' 确保唯一性。
-        skuRechargeEntity.setOutBusinessNo("700091009111");
-        String orderId = raffleOrder.createOrder(skuRechargeEntity);
+        skuRechargeEntity.setOutBusinessNo("700091009119");
+        skuRechargeEntity.setOrderTradeType(OrderTradeTypeVO.rebate_no_pay_trade);
+        String orderId = raffleActivityAccountQuotaService.createOrder(skuRechargeEntity);
         log.info("测试结果：{}", orderId);
     }
 
@@ -54,14 +57,15 @@ public class RaffleActivityAccountQuotaServiceTest {
      */
     @Test
     public void test_createSkuRechargeOrder() throws InterruptedException {
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 20; i++) {
             try {
                 SkuRechargeEntity skuRechargeEntity = new SkuRechargeEntity();
                 skuRechargeEntity.setUserId("xiaofuge");
                 skuRechargeEntity.setSku(9011L);
                 // outBusinessNo 作为幂等仿重使用，同一个业务单号2次使用会抛出索引冲突 Duplicate entry '700091009111' for key 'uq_out_business_no' 确保唯一性。
                 skuRechargeEntity.setOutBusinessNo(RandomStringUtils.randomNumeric(12));
-                String orderId = raffleOrder.createOrder(skuRechargeEntity);
+                skuRechargeEntity.setOrderTradeType(OrderTradeTypeVO.rebate_no_pay_trade);
+                String orderId = raffleActivityAccountQuotaService.createOrder(skuRechargeEntity);
                 log.info("测试结果：{}", orderId);
             } catch (AppException e) {
                 log.warn(e.getInfo());
@@ -69,6 +73,18 @@ public class RaffleActivityAccountQuotaServiceTest {
         }
 
         new CountDownLatch(1).await();
+    }
+
+    @Test
+    public void test_credit_pay_trade() {
+        SkuRechargeEntity skuRechargeEntity = new SkuRechargeEntity();
+        skuRechargeEntity.setUserId("xiaofuge");
+        skuRechargeEntity.setSku(9011L);
+        // outBusinessNo 作为幂等仿重使用，同一个业务单号2次使用会抛出索引冲突 Duplicate entry '700091009111' for key 'uq_out_business_no' 确保唯一性。
+        skuRechargeEntity.setOutBusinessNo("70009240609003");
+        skuRechargeEntity.setOrderTradeType(OrderTradeTypeVO.credit_pay_trade);
+        String orderId = raffleActivityAccountQuotaService.createOrder(skuRechargeEntity);
+        log.info("测试结果：{}", orderId);
     }
 
 }

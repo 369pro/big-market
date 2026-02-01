@@ -9,10 +9,6 @@ services:
     environment:
       TZ: Asia/Shanghai
       MYSQL_ROOT_PASSWORD: 123456
-    networks:
-      - my-network
-    depends_on:
-      - mysql-job-dbdata
     ports:
       - "13306:3306"
     volumes:
@@ -23,15 +19,8 @@ services:
       timeout: 10s
       retries: 10
       start_period: 15s
-    volumes_from:
-      - mysql-job-dbdata
-
-  # 自动加载数据
-  mysql-job-dbdata:
-    image: alpine:3.18.2
-    container_name: mysql-job-dbdata
-    volumes:
-      - /var/lib/mysql
+    networks:
+      - my-network
 
   # phpmyadmin https://hub.docker.com/_/phpmyadmin
   phpmyadmin:
@@ -71,6 +60,7 @@ services:
       retries: 3
 
   # RedisAdmin https://github.com/joeferner/redis-commander
+  # 账密 admin/admin
   redis-admin:
     image: spryker/redis-commander:0.8.0
     container_name: redis-admin
@@ -90,6 +80,23 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+
+  # rabbitmq
+  # 账密 admin/admin
+  # rabbitmq-plugins enable rabbitmq_management
+  rabbitmq:
+    image: rabbitmq:3.12.9
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+    command: rabbitmq-server
+    volumes:
+      - ./rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins
 
 networks:
   my-network:

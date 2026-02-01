@@ -1,6 +1,5 @@
 package com.pro.test.domain.credit;
 
-
 import com.pro.domain.credit.model.entity.TradeEntity;
 import com.pro.domain.credit.model.valobj.TradeNameVO;
 import com.pro.domain.credit.model.valobj.TradeTypeVO;
@@ -13,6 +12,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥
@@ -49,4 +49,16 @@ public class CreditAdjustServiceTest {
         creditAdjustService.createOrder(tradeEntity);
     }
 
+    @Test
+    public void test_createOrder_pay() throws InterruptedException {
+        TradeEntity tradeEntity = new TradeEntity();
+        tradeEntity.setUserId("xiaofuge");
+        tradeEntity.setTradeName(TradeNameVO.CONVERT_SKU);
+        tradeEntity.setTradeType(TradeTypeVO.REVERSE);
+        tradeEntity.setAmount(new BigDecimal("-1.68"));
+        tradeEntity.setOutBusinessNo("70009240609005");
+        creditAdjustService.createOrder(tradeEntity);
+
+        new CountDownLatch(1).await();
+    }
 }
