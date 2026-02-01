@@ -78,10 +78,11 @@
             <artifactId>converter-gson</artifactId>
             <version>2.9.0</version>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>cn.bugstack</groupId>-->
-<!--            <artifactId>business-behavior-monitor-sdk</artifactId>-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>plus.gaga</groupId>
+            <artifactId>business-behavior-monitor-sdk</artifactId>
+            <version>1.0</version>
+        </dependency>
 
         <!-- 工程模块；启动依赖 trigger->domain, infrastructure-->
         <dependency>
@@ -147,7 +148,7 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <version>3.2.5</version>
+                <version>2.6.0</version>
                 <configuration>
                     <mainClass>com.pro.Application</mainClass>
                     <layout>JAR</layout>

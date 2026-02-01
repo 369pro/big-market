@@ -97,10 +97,10 @@
         <appender-ref ref="ERROR_FILE"/>
     </appender>
 
-    <!--    <appender name="CUSTOM" class="cn.bugstack.monitor.sdk.appender.CustomAppender">-->
+    <!--    <appender name="CUSTOM" class="plus.gaga.monitor.sdk.appender.CustomAppender">-->
     <!--        <systemName>big-market</systemName>-->
     <!--        <groupId>cn.bugstack</groupId>-->
-    <!--        <host>127.0.0.1</host>-->
+    <!--        <host>192.168.1.108</host>-->
     <!--        <port>16379</port>-->
     <!--    </appender>-->
 
