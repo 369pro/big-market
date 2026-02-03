@@ -1,6 +1,7 @@
 package com.pro.domain.credit.service;
 
 
+import com.pro.domain.credit.model.entity.CreditAccountEntity;
 import com.pro.domain.credit.model.entity.TradeEntity;
 
 /**
@@ -17,4 +18,5 @@ public interface ICreditAdjustService {
      */
     String createOrder(TradeEntity tradeEntity);
 
+    CreditAccountEntity queryUserCreditAccount(String userId);
 }

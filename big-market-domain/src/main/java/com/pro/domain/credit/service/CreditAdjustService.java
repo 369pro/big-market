@@ -66,4 +66,9 @@ public class CreditAdjustService implements ICreditAdjustService{
         log.info("增加账户积分额度完成 userId:{} orderId:{}", tradeEntity.getUserId(), creditOrderEntity.getOrderId());
         return creditOrderEntity.getOrderId();
     }
+
+    @Override
+    public CreditAccountEntity queryUserCreditAccount(String userId) {
+        return creditRepository.queryUserCreditAccount(userId);
+    }
 }

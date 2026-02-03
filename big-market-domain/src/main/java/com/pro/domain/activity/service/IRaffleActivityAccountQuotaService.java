@@ -4,6 +4,7 @@ package com.pro.domain.activity.service;
 import com.pro.domain.activity.model.entity.ActivityAccountEntity;
 import com.pro.domain.activity.model.entity.DeliveryOrderEntity;
 import com.pro.domain.activity.model.entity.SkuRechargeEntity;
+import com.pro.domain.activity.model.entity.UnpaidActivityOrderEntity;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥
@@ -18,9 +19,9 @@ public interface IRaffleActivityAccountQuotaService {
      * 2. 对于用户可获得的抽奖次数，比如首次进来就有一次，则是依赖于运营配置的动作，在前端页面上。用户点击后，可以获得一次抽奖次数。
      *
      * @param skuRechargeEntity 活动商品充值实体对象
-     * @return 活动ID
+     * @return 【活动抽奖单订单ID】
      */
-    String createOrder(SkuRechargeEntity skuRechargeEntity);
+    UnpaidActivityOrderEntity createOrder(SkuRechargeEntity skuRechargeEntity);
 
     /**
      * 查询活动账户 - 日，参与次数
