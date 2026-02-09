@@ -1,8 +1,9 @@
 package com.pro.trigger.api.dto;
 
-import lombok.Data;
-
+import java.io.Serializable;
 import java.util.List;
+
+import lombok.Data;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥
@@ -10,7 +11,7 @@ import java.util.List;
  * @create 2024-05-03 09:35
  */
 @Data
-public class RaffleStrategyRuleWeightResponseDTO {
+public class RaffleStrategyRuleWeightResponseDTO implements Serializable {
 
     // 权重规则配置的抽奖次数
     private Integer ruleWeightCount;
@@ -20,7 +21,7 @@ public class RaffleStrategyRuleWeightResponseDTO {
     private List<StrategyAward> strategyAwards;
 
     @Data
-    public static class StrategyAward {
+    public static class StrategyAward implements Serializable {
         // 奖品ID
         private Integer awardId;
         // 奖品标题

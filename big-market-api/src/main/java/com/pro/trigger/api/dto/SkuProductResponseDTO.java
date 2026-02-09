@@ -1,8 +1,9 @@
 package com.pro.trigger.api.dto;
 
-import lombok.Data;
-
+import java.io.Serializable;
 import java.math.BigDecimal;
+
+import lombok.Data;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥
@@ -10,7 +11,7 @@ import java.math.BigDecimal;
  * @create 2024-06-15 09:12
  */
 @Data
-public class SkuProductResponseDTO {
+public class SkuProductResponseDTO implements Serializable {
 
     /**
      * 商品sku
@@ -43,7 +44,7 @@ public class SkuProductResponseDTO {
     private ActivityCount activityCount;
 
     @Data
-    public static class ActivityCount {
+    public static class ActivityCount implements Serializable {
         /**
          * 总次数
          */

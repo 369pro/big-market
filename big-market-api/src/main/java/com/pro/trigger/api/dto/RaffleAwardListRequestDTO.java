@@ -1,5 +1,7 @@
 package com.pro.trigger.api.dto;
 
+import java.io.Serializable;
+
 import lombok.Data;
 
 /**
@@ -8,7 +10,7 @@ import lombok.Data;
  * @create 2024-02-14 09:46
  */
 @Data
-public class RaffleAwardListRequestDTO {
+public class RaffleAwardListRequestDTO implements Serializable {
 
     // 用户ID
     private String userId;

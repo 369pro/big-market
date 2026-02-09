@@ -1,5 +1,7 @@
 package com.pro.trigger.api.dto;
 
+import java.io.Serializable;
+
 import lombok.Data;
 
 /**
@@ -8,7 +10,7 @@ import lombok.Data;
  * @create 2024-06-15 08:03
  */
 @Data
-public class SkuProductShopCartRequestDTO {
+public class SkuProductShopCartRequestDTO implements Serializable {
 
     /**
      * 用户ID

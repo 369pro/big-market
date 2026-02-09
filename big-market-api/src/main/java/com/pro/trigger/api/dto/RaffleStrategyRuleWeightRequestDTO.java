@@ -1,5 +1,7 @@
 package com.pro.trigger.api.dto;
 
+import java.io.Serializable;
+
 import lombok.Data;
 
 /**
@@ -8,7 +10,7 @@ import lombok.Data;
  * @create 2024-05-03 09:35
  */
 @Data
-public class RaffleStrategyRuleWeightRequestDTO {
+public class RaffleStrategyRuleWeightRequestDTO implements Serializable {
 
     // 用户ID
     private String userId;
