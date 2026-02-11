@@ -365,7 +365,7 @@ public class ActivityRepository implements IActivityRepository {
         } finally {
             dbRouter.clear();
             // 只有当前线程持有锁时才解锁，防止解锁已过期的锁
-            if (lock.isHeldByCurrentThread()) {
+            if (lock.isLocked() && lock.isHeldByCurrentThread()) {
                 lock.unlock();
             }
         }
