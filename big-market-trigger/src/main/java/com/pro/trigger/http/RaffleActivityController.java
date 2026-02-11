@@ -25,10 +25,17 @@ import com.pro.domain.strategy.model.entity.RaffleFactorEntity;
 import com.pro.domain.strategy.service.IRaffleStrategy;
 import com.pro.domain.strategy.service.armory.IStrategyArmory;
 import com.pro.trigger.api.IRaffleActivityService;
-import com.pro.trigger.api.dto.*;
+import com.pro.trigger.api.dto.ActivityDrawRequestDTO;
+import com.pro.trigger.api.dto.ActivityDrawResponseDTO;
+import com.pro.trigger.api.dto.SkuProductResponseDTO;
+import com.pro.trigger.api.dto.SkuProductShopCartRequestDTO;
+import com.pro.trigger.api.dto.UserActivityAccountRequestDTO;
+import com.pro.trigger.api.dto.UserActivityAccountResponseDTO;
+import com.pro.trigger.api.response.Response;
+import com.pro.types.annotations.DCCValue;
 import com.pro.types.enums.ResponseCode;
 import com.pro.types.exception.AppException;
-import com.pro.types.model.Response;
+
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -74,6 +81,10 @@ public class RaffleActivityController implements IRaffleActivityService {
     private ICreditAdjustService creditAdjustService;
     @Resource
     private IRaffleActivitySkuProductService raffleActivitySkuProductService;
+
+    // dcc 统一配置中心动态配置降级开关
+    @DCCValue("degradeSwitch:close")
+    private String degradeSwitch;
     /**
      * 活动装配 - 数据预热 | 把活动配置的对应的 sku 一起装配
      *
@@ -135,6 +146,12 @@ public class RaffleActivityController implements IRaffleActivityService {
         Long activityId = request.getActivityId();
         try{
             log.info("活动抽奖 userId:{} activityId:{}", userId, activityId);
+            if (!"open".equals(degradeSwitch)) {
+                return Response.<ActivityDrawResponseDTO>builder()
+                        .code(ResponseCode.DEGRADE_SWITCH.getCode())
+                        .info(ResponseCode.DEGRADE_SWITCH.getInfo())
+                        .build();
+            }
             // 1. 参数校验
             if (StringUtils.isBlank(userId) || null == activityId) {
                 throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), ResponseCode.ILLEGAL_PARAMETER.getInfo());

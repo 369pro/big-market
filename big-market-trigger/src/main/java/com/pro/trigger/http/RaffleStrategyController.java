@@ -1,5 +1,20 @@
 package com.pro.trigger.http;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.dubbo.config.annotation.DubboService;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.alibaba.fastjson.JSON;
 import com.pro.domain.activity.service.IRaffleActivityAccountQuotaService;
 import com.pro.domain.strategy.model.entity.RaffleAwardEntity;
@@ -11,19 +26,17 @@ import com.pro.domain.strategy.service.IRaffleRule;
 import com.pro.domain.strategy.service.IRaffleStrategy;
 import com.pro.domain.strategy.service.armory.IStrategyArmory;
 import com.pro.trigger.api.IRaffleStrategyService;
-import com.pro.trigger.api.dto.*;
+import com.pro.trigger.api.dto.RaffleAwardListRequestDTO;
+import com.pro.trigger.api.dto.RaffleAwardListResponseDTO;
+import com.pro.trigger.api.dto.RaffleStrategyRequestDTO;
+import com.pro.trigger.api.dto.RaffleStrategyResponseDTO;
+import com.pro.trigger.api.dto.RaffleStrategyRuleWeightRequestDTO;
+import com.pro.trigger.api.dto.RaffleStrategyRuleWeightResponseDTO;
+import com.pro.trigger.api.response.Response;
 import com.pro.types.enums.ResponseCode;
 import com.pro.types.exception.AppException;
-import com.pro.types.model.Response;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.dubbo.config.annotation.DubboService;
-import org.springframework.web.bind.annotation.*;
 
-import javax.annotation.Resource;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥

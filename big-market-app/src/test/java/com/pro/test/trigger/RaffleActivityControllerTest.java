@@ -1,19 +1,27 @@
 package com.pro.test.trigger;
 
-import com.alibaba.fastjson.JSON;
-import com.pro.trigger.api.IRaffleActivityService;
-import com.pro.trigger.api.dto.*;
-import com.pro.types.model.Response;
-import lombok.extern.slf4j.Slf4j;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+
+import javax.annotation.Resource;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import javax.annotation.Resource;
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
+import com.alibaba.fastjson.JSON;
+import com.pro.trigger.api.IRaffleActivityService;
+import com.pro.trigger.api.dto.ActivityDrawRequestDTO;
+import com.pro.trigger.api.dto.ActivityDrawResponseDTO;
+import com.pro.trigger.api.dto.SkuProductResponseDTO;
+import com.pro.trigger.api.dto.SkuProductShopCartRequestDTO;
+import com.pro.trigger.api.dto.UserActivityAccountRequestDTO;
+import com.pro.trigger.api.dto.UserActivityAccountResponseDTO;
+import com.pro.trigger.api.response.Response;
+
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥

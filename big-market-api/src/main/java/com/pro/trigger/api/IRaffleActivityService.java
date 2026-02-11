@@ -2,11 +2,16 @@ package com.pro.trigger.api;
 
 
 
-import com.pro.trigger.api.dto.*;
-import com.pro.types.model.Response;
-
 import java.math.BigDecimal;
 import java.util.List;
+
+import com.pro.trigger.api.dto.ActivityDrawRequestDTO;
+import com.pro.trigger.api.dto.ActivityDrawResponseDTO;
+import com.pro.trigger.api.dto.SkuProductResponseDTO;
+import com.pro.trigger.api.dto.SkuProductShopCartRequestDTO;
+import com.pro.trigger.api.dto.UserActivityAccountRequestDTO;
+import com.pro.trigger.api.dto.UserActivityAccountResponseDTO;
+import com.pro.trigger.api.response.Response;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥

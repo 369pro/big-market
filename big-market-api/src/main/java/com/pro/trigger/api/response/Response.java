@@ -1,4 +1,4 @@
-package com.pro.types.model;
+package com.pro.trigger.api.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

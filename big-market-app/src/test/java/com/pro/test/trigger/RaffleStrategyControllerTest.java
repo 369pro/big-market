@@ -1,20 +1,23 @@
 package com.pro.test.trigger;
 
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.junit4.SpringRunner;
+
 import com.alibaba.fastjson.JSON;
 import com.pro.trigger.api.IRaffleStrategyService;
 import com.pro.trigger.api.dto.RaffleAwardListRequestDTO;
 import com.pro.trigger.api.dto.RaffleAwardListResponseDTO;
 import com.pro.trigger.api.dto.RaffleStrategyRuleWeightRequestDTO;
 import com.pro.trigger.api.dto.RaffleStrategyRuleWeightResponseDTO;
-import com.pro.types.model.Response;
-import lombok.extern.slf4j.Slf4j;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
+import com.pro.trigger.api.response.Response;
 
-import javax.annotation.Resource;
-import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥

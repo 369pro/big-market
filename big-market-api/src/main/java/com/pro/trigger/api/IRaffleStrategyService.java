@@ -1,10 +1,15 @@
 package com.pro.trigger.api;
 
 
-import com.pro.trigger.api.dto.*;
-import com.pro.types.model.Response;
-
 import java.util.List;
+
+import com.pro.trigger.api.dto.RaffleAwardListRequestDTO;
+import com.pro.trigger.api.dto.RaffleAwardListResponseDTO;
+import com.pro.trigger.api.dto.RaffleStrategyRequestDTO;
+import com.pro.trigger.api.dto.RaffleStrategyResponseDTO;
+import com.pro.trigger.api.dto.RaffleStrategyRuleWeightRequestDTO;
+import com.pro.trigger.api.dto.RaffleStrategyRuleWeightResponseDTO;
+import com.pro.trigger.api.response.Response;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥
