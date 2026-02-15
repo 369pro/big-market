@@ -6,13 +6,17 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.CuratorCache;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.aop.framework.AopProxyUtils;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.annotation.Configuration;
 
+import javax.annotation.PostConstruct;
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Configuration
@@ -24,8 +28,17 @@ public class DCCValueBeanFactory implements BeanPostProcessor {
 
     private final Map<String, Object> dccObjGroup = new HashMap<>();
 
-    public DCCValueBeanFactory(CuratorFramework client) throws Exception {
+    public DCCValueBeanFactory(CuratorFramework client) {
         this.client = client;
+    }
+
+    @PostConstruct
+    public void init() throws Exception {
+        log.info("DCC 正在连接 Zookeeper 81.68.91.52...");
+        // 设定 5 秒超时，防止无限死等
+        if (!client.blockUntilConnected(3, TimeUnit.SECONDS)) {
+            log.warn("DCC 警告：连接 Zookeeper 超时，系统将在后台持续重试。");
+        }
         // 1.检查并且创建基础节点
         if(null == client.checkExists().forPath(BASE_CONFIG_PATH_CONFIG)){
             client.create().creatingParentsIfNeeded().forPath(BASE_CONFIG_PATH_CONFIG);
@@ -63,9 +76,17 @@ public class DCCValueBeanFactory implements BeanPostProcessor {
     @Nullable
     @Override
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-        // 获取bean中的所有字段
-        Class<?> beanClass = bean.getClass();
-        Field[] fields = beanClass.getDeclaredFields();
+        // 原来：获取bean中的所有字段
+        // Class<?> beanClass = bean.getClass();
+        // 现在：注意，增加 AOP 代理后，获得类的方式要通过 AopProxyUtils.getTargetClass(bean);
+        // 不能直接 bean.class 因为代理后类的结构发生变化，这样不能获得到自己的自定义注解了。
+        Class<?> targetBeanClass = bean.getClass();
+        Object targetBeanObject = bean;
+        if (AopUtils.isAopProxy(bean)) {
+            targetBeanClass = AopUtils.getTargetClass(bean);
+            targetBeanObject = AopProxyUtils.getSingletonTarget(bean);
+        }
+        Field[] fields = targetBeanClass.getDeclaredFields();
         for(Field field : fields){
             if(!field.isAnnotationPresent(DCCValue.class)){
                 continue;
@@ -88,7 +109,7 @@ public class DCCValueBeanFactory implements BeanPostProcessor {
                     client.create().creatingParentsIfNeeded().forPath(keyPath);
                     if (StringUtils.isNotBlank(defaultValue)) {
                         field.setAccessible(true);
-                        field.set(bean, defaultValue);
+                        field.set(targetBeanObject, defaultValue);
                         field.setAccessible(false);
                     }
                     log.info("DCC 节点监听 创建节点 {}", keyPath);
@@ -96,7 +117,7 @@ public class DCCValueBeanFactory implements BeanPostProcessor {
                     String configValue = new String(client.getData().forPath(keyPath));
                     if (StringUtils.isNotBlank(configValue)) {
                         field.setAccessible(true);
-                        field.set(bean, configValue);
+                        field.set(targetBeanObject, configValue);
                         field.setAccessible(false);
                         log.info("DCC 节点监听 设置配置 {} {} {}", keyPath, field.getName(), configValue);
                     }

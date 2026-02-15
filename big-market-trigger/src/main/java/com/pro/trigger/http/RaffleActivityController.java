@@ -2,6 +2,8 @@ package com.pro.trigger.http;
 
 
 import com.alibaba.fastjson.JSON;
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixProperty;
 import com.pro.domain.activity.model.entity.*;
 import com.pro.domain.activity.model.valobj.OrderTradeTypeVO;
 import com.pro.domain.activity.service.IRaffleActivityAccountQuotaService;
@@ -33,6 +35,7 @@ import com.pro.trigger.api.dto.UserActivityAccountRequestDTO;
 import com.pro.trigger.api.dto.UserActivityAccountResponseDTO;
 import com.pro.trigger.api.response.Response;
 import com.pro.types.annotations.DCCValue;
+import com.pro.types.annotations.RateLimiterAccessInterceptor;
 import com.pro.types.enums.ResponseCode;
 import com.pro.types.exception.AppException;
 
@@ -138,7 +141,19 @@ public class RaffleActivityController implements IRaffleActivityService {
      *     "userId":"xiaofuge",
      *     "activityId": 100301
      * }'
+     * 限流配置
+     * RateLimiterAccessInterceptor
+     * key: 以用户ID作为拦截，这个用户访问次数限制
+     * fallbackMethod：失败后的回调方法，方法出入参保持一样(通过AOP调用)
+     * permitsPerSecond：每秒的访问频次限制
+     * blacklistCount：超过多少次都被限制了，还访问的，扔到黑名单里24小时
+     * drawHystrixError：熔断机制，超过特定时间触发
      */
+    @RateLimiterAccessInterceptor(key = "userId", fallbackMethod = "drawRateLimiterError", permitsPerSecond = 1.0d, blacklistCount = 1)
+    @HystrixCommand(commandProperties = {
+            @HystrixProperty(name = "execution.isolation.thread.timeoutInMilliseconds", value = "150")
+    }, fallbackMethod = "drawHystrixError"
+    )
     @RequestMapping(value = "draw", method = RequestMethod.POST)
     @Override
     public Response<ActivityDrawResponseDTO> draw(@RequestBody ActivityDrawRequestDTO request) {
@@ -146,7 +161,8 @@ public class RaffleActivityController implements IRaffleActivityService {
         Long activityId = request.getActivityId();
         try{
             log.info("活动抽奖 userId:{} activityId:{}", userId, activityId);
-            if (!"open".equals(degradeSwitch)) {
+            // 0. 降级开关【open 开启、close 关闭】
+            if (StringUtils.isNotBlank(degradeSwitch) && "open".equals(degradeSwitch)) {
                 return Response.<ActivityDrawResponseDTO>builder()
                         .code(ResponseCode.DEGRADE_SWITCH.getCode())
                         .info(ResponseCode.DEGRADE_SWITCH.getInfo())
@@ -207,6 +223,21 @@ public class RaffleActivityController implements IRaffleActivityService {
         }
     }
 
+    public Response<ActivityDrawResponseDTO> drawRateLimiterError(@RequestBody ActivityDrawRequestDTO request) {
+        log.info("活动抽奖限流 userId:{} activityId:{}", request.getUserId(), request.getActivityId());
+        return Response.<ActivityDrawResponseDTO>builder()
+                .code(ResponseCode.RATE_LIMITER.getCode())
+                .info(ResponseCode.RATE_LIMITER.getInfo())
+                .build();
+    }
+
+    public Response<ActivityDrawResponseDTO> drawHystrixError(@RequestBody ActivityDrawRequestDTO request) {
+        log.info("活动抽奖熔断 userId:{} activityId:{}", request.getUserId(), request.getActivityId());
+        return Response.<ActivityDrawResponseDTO>builder()
+                .code(ResponseCode.HYSTRIX.getCode())
+                .info(ResponseCode.HYSTRIX.getInfo())
+                .build();
+    }
     /**
      * 日历签到返利接口
      *
