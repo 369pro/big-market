@@ -2,7 +2,7 @@ package com.pro.trigger.job;
 
 import com.pro.domain.activity.model.valobj.ActivitySkuStockKeyVO;
 import com.pro.domain.activity.service.IRaffleActivitySkuStockService;
-import com.pro.infrastructure.persistent.dao.IRaffleActivitySkuDao;
+import com.pro.infrastructure.dao.IRaffleActivitySkuDao;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;

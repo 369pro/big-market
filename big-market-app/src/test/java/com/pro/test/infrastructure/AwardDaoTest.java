@@ -1,8 +1,8 @@
 package com.pro.test.infrastructure;
 
 import com.alibaba.fastjson.JSON;
-import com.pro.infrastructure.persistent.dao.IAwardDao;
-import com.pro.infrastructure.persistent.po.Award;
+import com.pro.infrastructure.dao.IAwardDao;
+import com.pro.infrastructure.dao.po.Award;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
 import org.junit.runner.RunWith;
