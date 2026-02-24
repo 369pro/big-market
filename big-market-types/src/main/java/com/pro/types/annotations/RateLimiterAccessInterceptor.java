@@ -7,7 +7,7 @@ import java.lang.annotation.*;
 @Documented
 public @interface RateLimiterAccessInterceptor {
 
-    /** 用哪个字段作为拦截标识，未配置则默认走全部 */
+    /** 用哪个字段【不是具体值，而是属性】作为拦截标识，未配置则默认走全部 */
     String key() default "all";
 
     /** 限制频次（每秒请求次数） */

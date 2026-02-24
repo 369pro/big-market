@@ -7,7 +7,7 @@
 #
 # 主机: 127.0.0.1 (MySQL 5.6.39)
 # 数据库: big_market_02
-# 生成时间: 2024-06-15 03:25:40 +0000
+# 生成时间: 2024-06-22 04:20:20 +0000
 # ************************************************************
 
 
@@ -198,6 +198,11 @@ CREATE TABLE `raffle_activity_order_002` (
   KEY `idx_user_id_activity_id` (`user_id`,`activity_id`,`state`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='抽奖活动单';
 
+LOCK TABLES `raffle_activity_order_002` WRITE;
+/*!40000 ALTER TABLE `raffle_activity_order_002` DISABLE KEYS */;
+
+/*!40000 ALTER TABLE `raffle_activity_order_002` ENABLE KEYS */;
+UNLOCK TABLES;
 
 
 # 转储表 raffle_activity_order_003
@@ -317,6 +322,11 @@ CREATE TABLE `user_award_record_001` (
   KEY `idx_award_id` (`strategy_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户中奖记录表';
 
+LOCK TABLES `user_award_record_001` WRITE;
+/*!40000 ALTER TABLE `user_award_record_001` DISABLE KEYS */;
+
+/*!40000 ALTER TABLE `user_award_record_001` ENABLE KEYS */;
+UNLOCK TABLES;
 
 
 # 转储表 user_award_record_002
@@ -343,6 +353,11 @@ CREATE TABLE `user_award_record_002` (
   KEY `idx_award_id` (`strategy_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户中奖记录表';
 
+LOCK TABLES `user_award_record_002` WRITE;
+/*!40000 ALTER TABLE `user_award_record_002` DISABLE KEYS */;
+
+/*!40000 ALTER TABLE `user_award_record_002` ENABLE KEYS */;
+UNLOCK TABLES;
 
 
 # 转储表 user_award_record_003
@@ -459,6 +474,11 @@ CREATE TABLE `user_behavior_rebate_order_002` (
   KEY `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户行为返利流水订单表';
 
+LOCK TABLES `user_behavior_rebate_order_002` WRITE;
+/*!40000 ALTER TABLE `user_behavior_rebate_order_002` DISABLE KEYS */;
+
+/*!40000 ALTER TABLE `user_behavior_rebate_order_002` ENABLE KEYS */;
+UNLOCK TABLES;
 
 
 # 转储表 user_behavior_rebate_order_003
@@ -535,6 +555,11 @@ CREATE TABLE `user_credit_order_000` (
   KEY `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户积分订单记录';
 
+LOCK TABLES `user_credit_order_000` WRITE;
+/*!40000 ALTER TABLE `user_credit_order_000` DISABLE KEYS */;
+
+/*!40000 ALTER TABLE `user_credit_order_000` ENABLE KEYS */;
+UNLOCK TABLES;
 
 
 # 转储表 user_credit_order_001
@@ -558,6 +583,11 @@ CREATE TABLE `user_credit_order_001` (
   KEY `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户积分订单记录';
 
+LOCK TABLES `user_credit_order_001` WRITE;
+/*!40000 ALTER TABLE `user_credit_order_001` DISABLE KEYS */;
+
+/*!40000 ALTER TABLE `user_credit_order_001` ENABLE KEYS */;
+UNLOCK TABLES;
 
 
 # 转储表 user_credit_order_002
@@ -581,6 +611,11 @@ CREATE TABLE `user_credit_order_002` (
   KEY `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户积分订单记录';
 
+LOCK TABLES `user_credit_order_002` WRITE;
+/*!40000 ALTER TABLE `user_credit_order_002` DISABLE KEYS */;
+
+/*!40000 ALTER TABLE `user_credit_order_002` ENABLE KEYS */;
+UNLOCK TABLES;
 
 
 # 转储表 user_credit_order_003
@@ -655,6 +690,11 @@ CREATE TABLE `user_raffle_order_001` (
   KEY `idx_user_id_activity_id` (`user_id`,`activity_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户抽奖订单表';
 
+LOCK TABLES `user_raffle_order_001` WRITE;
+/*!40000 ALTER TABLE `user_raffle_order_001` DISABLE KEYS */;
+
+/*!40000 ALTER TABLE `user_raffle_order_001` ENABLE KEYS */;
+UNLOCK TABLES;
 
 
 # 转储表 user_raffle_order_002
@@ -678,6 +718,11 @@ CREATE TABLE `user_raffle_order_002` (
   KEY `idx_user_id_activity_id` (`user_id`,`activity_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户抽奖订单表';
 
+LOCK TABLES `user_raffle_order_002` WRITE;
+/*!40000 ALTER TABLE `user_raffle_order_002` DISABLE KEYS */;
+
+/*!40000 ALTER TABLE `user_raffle_order_002` ENABLE KEYS */;
+UNLOCK TABLES;
 
 
 # 转储表 user_raffle_order_003
