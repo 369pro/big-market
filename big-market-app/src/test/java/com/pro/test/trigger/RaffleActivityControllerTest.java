@@ -43,8 +43,8 @@ public class RaffleActivityControllerTest {
     }
 
     @Test
-    public void test_draw() {
-        for (int i = 0; i < 10; i++) {
+    public void test_draw() throws InterruptedException {
+        for (int i = 0; i < 2; i++) {
             ActivityDrawRequestDTO request = new ActivityDrawRequestDTO();
             request.setActivityId(100301L);
             request.setUserId("xiaofuge");
@@ -53,6 +53,7 @@ public class RaffleActivityControllerTest {
             log.info("请求参数：{}", JSON.toJSONString(request));
             log.info("测试结果：{}", JSON.toJSONString(response));
         }
+        new CountDownLatch(1).await();
     }
 
     @Test

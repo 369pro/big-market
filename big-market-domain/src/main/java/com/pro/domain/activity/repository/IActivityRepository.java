@@ -40,6 +40,8 @@ public interface IActivityRepository {
 
     void clearActivitySkuStock(Long sku);
 
+    List<Long> querySkuList();
+
     UserRaffleOrderEntity queryNoUsedRaffleOrder(PartakeRaffleActivityEntity partakeRaffleActivityEntity);
 
     ActivityAccountEntity queryActivityAccountByUserId(String userId, Long activityId);

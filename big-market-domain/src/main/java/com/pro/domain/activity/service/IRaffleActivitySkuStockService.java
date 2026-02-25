@@ -3,6 +3,8 @@ package com.pro.domain.activity.service;
 
 import com.pro.domain.activity.model.valobj.ActivitySkuStockKeyVO;
 
+import java.util.List;
+
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥
  * @description 活动sku库存处理接口
@@ -37,4 +39,5 @@ public interface IRaffleActivitySkuStockService {
      */
     void clearActivitySkuStock(Long sku);
 
+    List<Long> querySkuList();
 }

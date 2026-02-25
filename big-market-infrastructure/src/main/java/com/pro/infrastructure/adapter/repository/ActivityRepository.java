@@ -435,6 +435,11 @@ public class ActivityRepository implements IActivityRepository {
     }
 
     @Override
+    public List<Long> querySkuList() {
+        return raffleActivitySkuDao.querySkuList();
+    }
+
+    @Override
     public UserRaffleOrderEntity queryNoUsedRaffleOrder(PartakeRaffleActivityEntity partakeRaffleActivityEntity) {
         // 查询数据
         UserRaffleOrder userRaffleOrderReq = new UserRaffleOrder();

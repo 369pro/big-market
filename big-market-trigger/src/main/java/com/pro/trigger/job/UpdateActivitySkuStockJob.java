@@ -4,11 +4,13 @@ import com.pro.domain.activity.model.valobj.ActivitySkuStockKeyVO;
 import com.pro.domain.activity.service.IRaffleActivitySkuStockService;
 import com.pro.infrastructure.dao.IRaffleActivitySkuDao;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RedissonClient;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.util.List;
+import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * @author 369pro
@@ -22,20 +24,29 @@ public class UpdateActivitySkuStockJob {
     private IRaffleActivitySkuStockService skuStock;
     @Resource
     private IRaffleActivitySkuDao raffleActivitySkuDao;
+    @Resource
+    private ThreadPoolExecutor executor;
 
     @Scheduled(cron = "0/2 * * * * ?")
     public void exec() {
         try {
             // log.info("定时任务，更新活动sku库存【延迟队列获取，降低对数据库的更新频次，不要产生竞争】");
-            List<Long> skuList = raffleActivitySkuDao.listSku();
+            List<Long> skuList = raffleActivitySkuDao.querySkuList();
             for(Long sku : skuList){
-                ActivitySkuStockKeyVO activitySkuStockKeyVO = skuStock.takeQueueValue(sku);
-                if (null == activitySkuStockKeyVO) {
-                    continue;
-                }
-                log.info("UpdateActivitySkuStockJob，更新活动sku库存 sku:{} activityId:{}",
-                        activitySkuStockKeyVO.getSku(), activitySkuStockKeyVO.getActivityId());
-                skuStock.updateActivitySkuStock(activitySkuStockKeyVO.getSku());
+                executor.execute(()->{
+                    ActivitySkuStockKeyVO activitySkuStockKeyVO = null;
+                    try {
+                        activitySkuStockKeyVO = skuStock.takeQueueValue(sku);
+                    } catch (InterruptedException e) {
+                        log.error("定时任务，更新活动sku库存失败 sku: {} topic: {}", sku, activitySkuStockKeyVO.getActivityId());
+                    }
+                    if (null == activitySkuStockKeyVO) {
+                        return;
+                    }
+                    log.info("UpdateActivitySkuStockJob，更新活动sku库存 sku:{} activityId:{}",
+                            activitySkuStockKeyVO.getSku(), activitySkuStockKeyVO.getActivityId());
+                    skuStock.updateActivitySkuStock(activitySkuStockKeyVO.getSku());
+                });
             }
         }catch (Exception e) {
             log.error("UpdateActivitySkuStockJob，更新活动sku库存失败", e);
