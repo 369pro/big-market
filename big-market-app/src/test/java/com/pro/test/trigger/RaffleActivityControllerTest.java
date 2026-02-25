@@ -1,13 +1,16 @@
 package com.pro.test.trigger;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import javax.annotation.Resource;
 
+import org.apache.curator.framework.CuratorFramework;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -35,6 +38,9 @@ public class RaffleActivityControllerTest {
 
     @Resource
     private IRaffleActivityService raffleActivityService;
+
+    @Autowired(required = false)
+    private CuratorFramework curatorFramework;
 
     @Test
     public void test_armory() {
@@ -115,5 +121,10 @@ public class RaffleActivityControllerTest {
         log.info("测试结果：{}", JSON.toJSONString(response));
 
         new CountDownLatch(1).await();
+    }
+
+    @Test
+    public void test_set_dcc_value() throws Exception {
+        curatorFramework.setData().forPath("/big-market-dcc/config/degradeSwitch", "close".getBytes(StandardCharsets.UTF_8));
     }
 }

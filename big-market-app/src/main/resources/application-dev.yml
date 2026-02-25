@@ -16,6 +16,10 @@ app:
 
 # Spring 配置；rabbitmq
 spring:
+  cloud:
+    zookeeper:
+      enabled: false  # 已改用 Dubbo+Nacos，完全禁用 Spring Cloud ZK，避免其创建额外的 CuratorFramework bean
+
   rabbitmq:
     addresses: 81.68.91.52
     port: 5672
@@ -137,6 +141,8 @@ dubbo:
 zookeeper:
   sdk:
     config:
+      # 状态；true = 开启、false 关闭
+      enable: false
       connect-string: 81.68.91.52:2181
       base-sleep-time-ms: 1000
       max-retries: 3

@@ -1,7 +1,12 @@
 package com.pro.config;
 
-import com.pro.types.annotations.DCCValue;
-import lombok.extern.slf4j.Slf4j;
+import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import javax.annotation.PostConstruct;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.CuratorCache;
@@ -9,14 +14,13 @@ import org.jetbrains.annotations.Nullable;
 import org.springframework.aop.framework.AopProxyUtils;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.annotation.Configuration;
 
-import javax.annotation.PostConstruct;
-import java.lang.reflect.Field;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
+import com.pro.types.annotations.DCCValue;
+
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Configuration
@@ -24,20 +28,34 @@ public class DCCValueBeanFactory implements BeanPostProcessor {
     private static final String BASE_CONFIG_PATH = "/big-market-dcc";
     private static final String BASE_CONFIG_PATH_CONFIG = BASE_CONFIG_PATH + "/config";
 
-    private final CuratorFramework client;
+//    private final CuratorFramework client;
+    @Autowired(required = false)
+    private CuratorFramework client;
 
     private final Map<String, Object> dccObjGroup = new HashMap<>();
-
-    public DCCValueBeanFactory(CuratorFramework client) {
-        this.client = client;
-    }
+    // ❌ 之前：Spring 用构造器注入，强制找 CuratorFramework bean
+//    public DCCValueBeanFactory(CuratorFramework client) {
+//        if (null == client) {
+//            // 记录一条日志，告诉自己/运维这里没有注入 client，以防日后排查问题
+//            log.info("CuratorFramework client 未注入，将以无 client 模式运行。");
+//            return;
+//        }
+//        this.client = client;
+//    }
 
     @PostConstruct
     public void init() throws Exception {
+        // 核心重点：既然 client 是可选的，init 里面第一件事就是判空！
+        if (this.client == null) {
+            log.warn("由于 client 为空，跳过 Zookeeper 相关的初始化逻辑...");
+            // 直接返回，或者执行一些不需要 client 的降级初始化逻辑
+            return;
+        }
         log.info("DCC 正在连接 Zookeeper 81.68.91.52...");
-        // 设定 5 秒超时，防止无限死等
+        // 设定 3 秒超时，防止无限死等
         if (!client.blockUntilConnected(3, TimeUnit.SECONDS)) {
-            log.warn("DCC 警告：连接 Zookeeper 超时，系统将在后台持续重试。");
+            log.warn("DCC 警告：连接 Zookeeper 超时，跳过初始化，系统将在后台持续重试。");
+            return; // ⚠️ 超时就直接返回，避免后续 forPath 操作抛 ConnectionLossException
         }
         // 1.检查并且创建基础节点
         if(null == client.checkExists().forPath(BASE_CONFIG_PATH_CONFIG)){
@@ -76,6 +94,7 @@ public class DCCValueBeanFactory implements BeanPostProcessor {
     @Nullable
     @Override
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+        if (client == null) return bean;
         // 原来：获取bean中的所有字段
         // Class<?> beanClass = bean.getClass();
         // 现在：注意，增加 AOP 代理后，获得类的方式要通过 AopProxyUtils.getTargetClass(bean);
@@ -125,9 +144,20 @@ public class DCCValueBeanFactory implements BeanPostProcessor {
                 // 记录到缓存
                 dccObjGroup.put(BASE_CONFIG_PATH_CONFIG.concat("/").concat(key), bean);
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                // ZK 连接不稳定时，优雅降级：使用默认值，不抛异常炸掉 Spring 容器
+                log.warn("DCC 连接 ZooKeeper 失败，字段 [{}] 将使用默认值 [{}]，原因：{}", field.getName(), defaultValue, e.getMessage());
+                try {
+                    if (StringUtils.isNotBlank(defaultValue)) {
+                        field.setAccessible(true);
+                        field.set(targetBeanObject, defaultValue);
+                        field.setAccessible(false);
+                    }
+                } catch (Exception ex) {
+                    log.error("DCC 设置默认值也失败了，字段 [{}]", field.getName(), ex);
+                }
             }
         }
+
         return bean;
     }
 }

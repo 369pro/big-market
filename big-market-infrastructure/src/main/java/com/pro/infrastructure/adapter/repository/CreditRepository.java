@@ -14,7 +14,7 @@ import com.pro.infrastructure.dao.IUserCreditOrderDao;
 import com.pro.infrastructure.dao.po.Task;
 import com.pro.infrastructure.dao.po.UserCreditAccount;
 import com.pro.infrastructure.dao.po.UserCreditOrder;
-import com.pro.infrastructure.persistent.redis.IRedisService;
+import com.pro.infrastructure.redis.IRedisService;
 import com.pro.types.common.Constants;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;

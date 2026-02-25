@@ -227,7 +227,11 @@ public class StrategyRepository implements IStrategyRepository {
     public Boolean subtractionAwardStock(String cacheKey){
         return subtractionAwardStock(cacheKey, null);
     }
-
+    /**
+     * 扣减库存并加锁操作，decr和0对比，如果是incr操作就和总量对比，和总量对比可以动态添加库存
+     * @param cacheKey    缓存Key
+     * @param endDateTime 活动结束时间
+     */
     @Override
     public Boolean subtractionAwardStock(String cacheKey, Date endDateTime) {
         long surplus = redisService.decr(cacheKey);

@@ -1,7 +1,7 @@
 package com.pro.test.domain.strategy;
 
 import com.pro.domain.strategy.service.armory.IStrategyArmory;
-import com.pro.infrastructure.persistent.redis.IRedisService;
+import com.pro.infrastructure.redis.IRedisService;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
 import org.junit.runner.RunWith;
