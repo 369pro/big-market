@@ -24,6 +24,7 @@ public class UpdateActivitySkuStockJob {
     private IRaffleActivitySkuStockService skuStock;
     @Resource
     private IRaffleActivitySkuDao raffleActivitySkuDao;
+    // todo 这里的线程池没看懂
     @Resource
     private ThreadPoolExecutor executor;
 
@@ -38,7 +39,7 @@ public class UpdateActivitySkuStockJob {
                     try {
                         activitySkuStockKeyVO = skuStock.takeQueueValue(sku);
                     } catch (InterruptedException e) {
-                        log.error("定时任务，更新活动sku库存失败 sku: {} topic: {}", sku, activitySkuStockKeyVO.getActivityId());
+                        log.error("定时任务，更新活动sku库存失败 sku: {}", sku);
                     }
                     if (null == activitySkuStockKeyVO) {
                         return;

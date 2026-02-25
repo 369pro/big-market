@@ -271,6 +271,13 @@ public class StrategyRepository implements IStrategyRepository {
     }
 
     @Override
+    public StrategyAwardStockKeyVO takeQueueValue(Long strategyId, Integer awardId) throws InterruptedException{
+        String cacheKey = Constants.RedisKey.STRATEGY_AWARD_COUNT_QUERY_KEY + Constants.UNDERLINE + strategyId + Constants.UNDERLINE + awardId;
+        RBlockingQueue<StrategyAwardStockKeyVO> destinationQueue = redisService.getBlockingQueue(cacheKey);
+        return destinationQueue.poll();
+    }
+
+    @Override
     public void updateStrategyAwardStock(Long strategyId, Integer awardId) {
         StrategyAward strategyAward = new StrategyAward();
         strategyAward.setStrategyId(strategyId);
@@ -403,5 +410,22 @@ public class StrategyRepository implements IStrategyRepository {
         redisService.setValue(cacheKey, ruleWeightVOS);
 
         return ruleWeightVOS;
+    }
+
+    @Override
+    public List<StrategyAwardStockKeyVO> queryOpenActivityStrategyAwardList() {
+        List<StrategyAward> strategyAwards = strategyAwardDao.queryOpenActivityStrategyAwardList();
+        if (null == strategyAwards || strategyAwards.isEmpty()) return null;
+
+        List<StrategyAwardStockKeyVO> strategyAwardStockKeyVOS = new ArrayList<>();
+        for (StrategyAward strategyAward: strategyAwards){
+            StrategyAwardStockKeyVO strategyAwardStockKeyVO = StrategyAwardStockKeyVO.builder()
+                    .strategyId(strategyAward.getStrategyId())
+                    .awardId(strategyAward.getAwardId())
+                    .build();
+            strategyAwardStockKeyVOS.add(strategyAwardStockKeyVO);
+        }
+
+        return strategyAwardStockKeyVOS;
     }
 }

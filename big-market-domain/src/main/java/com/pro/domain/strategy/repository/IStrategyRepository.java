@@ -64,6 +64,7 @@ public interface IStrategyRepository {
      */
     StrategyAwardStockKeyVO takeQueueValue() throws InterruptedException;
 
+    StrategyAwardStockKeyVO takeQueueValue(Long strategyId, Integer awardId) throws InterruptedException;
     /**
      * 更新奖品库存消耗
      *
@@ -97,4 +98,12 @@ public interface IStrategyRepository {
     List<RuleWeightVO> queryAwardRuleWeight(Long strategyId);
 
     Integer queryActivityAccountTotalUseCount(String userId, Long strategyId);
+
+    /**
+     * 查询有效活动的奖品配置
+     *
+     * @return 奖品配置列表
+     */
+    List<StrategyAwardStockKeyVO> queryOpenActivityStrategyAwardList();
+
 }
