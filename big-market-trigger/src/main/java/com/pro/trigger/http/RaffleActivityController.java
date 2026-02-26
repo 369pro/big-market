@@ -1,10 +1,32 @@
 package com.pro.trigger.http;
 
 
+import java.math.BigDecimal;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.dubbo.config.annotation.DubboService;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.alibaba.fastjson.JSON;
 import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
 import com.netflix.hystrix.contrib.javanica.annotation.HystrixProperty;
-import com.pro.domain.activity.model.entity.*;
+import com.pro.domain.activity.model.entity.ActivityAccountEntity;
+import com.pro.domain.activity.model.entity.SkuProductEntity;
+import com.pro.domain.activity.model.entity.SkuRechargeEntity;
+import com.pro.domain.activity.model.entity.UnpaidActivityOrderEntity;
+import com.pro.domain.activity.model.entity.UserRaffleOrderEntity;
 import com.pro.domain.activity.model.valobj.OrderTradeTypeVO;
 import com.pro.domain.activity.service.IRaffleActivityAccountQuotaService;
 import com.pro.domain.activity.service.IRaffleActivityPartakeService;
@@ -40,17 +62,6 @@ import com.pro.types.enums.ResponseCode;
 import com.pro.types.exception.AppException;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.dubbo.config.annotation.DubboService;
-import org.springframework.web.bind.annotation.*;
-
-import javax.annotation.Resource;
-import java.math.BigDecimal;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥
@@ -105,6 +116,10 @@ public class RaffleActivityController implements IRaffleActivityService {
     public Response<Boolean> armory(@RequestParam Long activityId) {
         try {
             log.info("活动装配，数据预热，开始 activityId:{}", activityId);
+            // 0. 参数校验
+            if (null == activityId) {
+                throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), ResponseCode.ILLEGAL_PARAMETER.getInfo());
+            }
             // 1. 活动装配
             activityArmory.assembleActivitySkuByActivityId(activityId);
             // 2. 策略装配
@@ -161,6 +176,10 @@ public class RaffleActivityController implements IRaffleActivityService {
         Long activityId = request.getActivityId();
         try{
             log.info("活动抽奖 userId:{} activityId:{}", userId, activityId);
+            // 0. 参数校验
+            if (StringUtils.isBlank(request.getUserId()) || null == request.getActivityId()) {
+                throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), ResponseCode.ILLEGAL_PARAMETER.getInfo());
+            }
             // 0. 降级开关【open 开启、close 关闭】
             if (StringUtils.isNotBlank(degradeSwitch) && "open".equals(degradeSwitch)) {
                 return Response.<ActivityDrawResponseDTO>builder()
@@ -254,6 +273,10 @@ public class RaffleActivityController implements IRaffleActivityService {
     public Response<Boolean> calendarSignRebate(@RequestParam String userId) {
         try {
             log.info("日历签到返利开始 userId:{}", userId);
+            // 0. 参数校验
+            if (StringUtils.isBlank(userId)) {
+                throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), ResponseCode.ILLEGAL_PARAMETER.getInfo());
+            }
             BehaviorEntity behaviorEntity = new BehaviorEntity();
             behaviorEntity.setUserId(userId);
             behaviorEntity.setBehaviorTypeVO(BehaviorTypeVO.SIGN);
@@ -291,6 +314,10 @@ public class RaffleActivityController implements IRaffleActivityService {
     public Response<Boolean> isCalendarSignRebate(@RequestParam String userId) {
         try {
             log.info("查询用户是否完成日历签到返利开始 userId:{}", userId);
+            // 0. 参数校验
+            if (StringUtils.isBlank(userId)) {
+                throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), ResponseCode.ILLEGAL_PARAMETER.getInfo());
+            }
             String outBusinessNo = dateFormatDay.format(new Date());
             List<BehaviorRebateOrderEntity> behaviorRebateOrderEntities = behaviorRebateService.queryOrderByOutBusinessNo(userId, outBusinessNo);
             log.info("查询用户是否完成日历签到返利完成 userId:{} orders.size:{}", userId, behaviorRebateOrderEntities.size());
@@ -401,6 +428,10 @@ public class RaffleActivityController implements IRaffleActivityService {
     public Response<BigDecimal> queryUserCreditAccount(String userId) {
         try {
             log.info("查询用户积分值开始 userId:{}", userId);
+            // 0. 参数校验
+            if (StringUtils.isBlank(userId)) {
+                throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), ResponseCode.ILLEGAL_PARAMETER.getInfo());
+            }
             CreditAccountEntity creditAccountEntity = creditAdjustService.queryUserCreditAccount(userId);
             log.info("查询用户积分值完成 userId:{} adjustAmount:{}", userId, creditAccountEntity.getAdjustAmount());
             return Response.<BigDecimal>builder()
@@ -423,6 +454,10 @@ public class RaffleActivityController implements IRaffleActivityService {
     public Response<Boolean> creditPayExchangeSku(@RequestBody SkuProductShopCartRequestDTO request) {
         try {
             log.info("积分兑换商品开始 userId:{} sku:{}", request.getUserId(), request.getSku());
+            // 0. 参数校验
+            if (StringUtils.isBlank(request.getUserId()) || null == request.getSku()) {
+                throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), ResponseCode.ILLEGAL_PARAMETER.getInfo());
+            }
             // 1. 创建兑换商品sku订单，outBusinessNo 每次创建出一个单号。
             // 返回的是未支付订单实体类
             UnpaidActivityOrderEntity unpaidActivityOrder = raffleActivityAccountQuotaService.createOrder(SkuRechargeEntity.builder()

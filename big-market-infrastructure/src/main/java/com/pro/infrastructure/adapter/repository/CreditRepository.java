@@ -110,7 +110,9 @@ public class CreditRepository implements ICreditRepository {
             });
         }finally {
             dbRouter.clear();
-            lock.unlock();
+            if (lock.isLocked() && lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
         }
 
         try {

@@ -6,8 +6,11 @@ import com.pro.domain.credit.model.entity.CreditAccountEntity;
 import com.pro.domain.credit.model.entity.CreditOrderEntity;
 import com.pro.domain.credit.model.entity.TaskEntity;
 import com.pro.domain.credit.model.entity.TradeEntity;
+import com.pro.domain.credit.model.valobj.TradeTypeVO;
 import com.pro.domain.credit.repository.ICreditRepository;
+import com.pro.types.enums.ResponseCode;
 import com.pro.types.event.BaseEvent;
+import com.pro.types.exception.AppException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -32,6 +35,13 @@ public class CreditAdjustService implements ICreditAdjustService{
 //                .userId(tradeEntity.getUserId())
 //                .adjustAmount(tradeEntity.getAmount()).build();
         log.info("增加账户积分额度开始 userId:{} tradeName:{} amount:{}", tradeEntity.getUserId(), tradeEntity.getTradeName(), tradeEntity.getAmount());
+        // 0. 判断处理，逆向交易，扣减积分，需要查询账户是否存在以及积分额度是否充足
+        if (TradeTypeVO.REVERSE.equals(tradeEntity.getTradeType())) {
+            CreditAccountEntity creditAccountEntity = creditRepository.queryUserCreditAccount(tradeEntity.getUserId());
+            if (null == creditAccountEntity || creditAccountEntity.getAdjustAmount().compareTo(tradeEntity.getAmount()) < 0) {
+                throw new AppException(ResponseCode.USER_CREDIT_ACCOUNT_NO_AVAILABLE_AMOUNT.getCode(), ResponseCode.USER_CREDIT_ACCOUNT_NO_AVAILABLE_AMOUNT.getInfo());
+            }
+        }
         // 1. 创建账户积分实体
         CreditAccountEntity creditAccountEntity = TradeAggregate.createCreditAccountEntity(
                 tradeEntity.getUserId(),
@@ -63,7 +73,7 @@ public class CreditAdjustService implements ICreditAdjustService{
                 .build();
         // 3. 保存积分交易订单
         creditRepository.saveUserCreditTradeOrder(tradeAggregate);
-        log.info("增加账户积分额度完成 userId:{} orderId:{}", tradeEntity.getUserId(), creditOrderEntity.getOrderId());
+        log.info("创建账户积分额度订单完成 userId:{} orderId:{}", tradeEntity.getUserId(), creditOrderEntity.getOrderId());
         return creditOrderEntity.getOrderId();
     }
 
