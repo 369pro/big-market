@@ -14,34 +14,44 @@ import org.jetbrains.annotations.Nullable;
 import org.springframework.aop.framework.AopProxyUtils;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanPostProcessor;
-import org.springframework.context.annotation.Configuration;
 
 import com.pro.types.annotations.DCCValue;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Configuration;
 
+/**
+ * 上有 @Configuration 注解，导致 Spring 启动时无条件扫描并实例化它，
+ * 强制要求通过构造器注入 CuratorFramework bean。
+ * 但 CuratorFramework Bean 在
+ * ZooKeeperClientConfig中被 @ConditionalOnProperty(enable=true) 保护着，
+ * 当 ZooKeeper 未启用时根本不会创建，于是就报错
+ *
+ * 【修复方案】：去掉
+ * DCCValueBeanFactory上的 @Configuration 注解。这样DCCValueBeanFactory
+ *  不再被 Spring 自动扫描，完全由
+ * ZooKeeperClientConfig里条件受控的 @Bean 方法来管理：
+ */
 @Slf4j
-@Configuration
+//@Configuration
 public class DCCValueBeanFactory implements BeanPostProcessor {
     private static final String BASE_CONFIG_PATH = "/big-market-dcc";
     private static final String BASE_CONFIG_PATH_CONFIG = BASE_CONFIG_PATH + "/config";
 
 //    private final CuratorFramework client;
-    @Autowired(required = false)
     private CuratorFramework client;
 
     private final Map<String, Object> dccObjGroup = new HashMap<>();
     // ❌ 之前：Spring 用构造器注入，强制找 CuratorFramework bean
-//    public DCCValueBeanFactory(CuratorFramework client) {
-//        if (null == client) {
-//            // 记录一条日志，告诉自己/运维这里没有注入 client，以防日后排查问题
-//            log.info("CuratorFramework client 未注入，将以无 client 模式运行。");
-//            return;
-//        }
-//        this.client = client;
-//    }
+    public DCCValueBeanFactory(CuratorFramework client) {
+        if (null == client) {
+            // 记录一条日志，告诉自己/运维这里没有注入 client，以防日后排查问题
+            log.info("CuratorFramework client 未注入，将以无 client 模式运行。");
+            return;
+        }
+        this.client = client;
+    }
 
     @PostConstruct
     public void init() throws Exception {
