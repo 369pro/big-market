@@ -14,6 +14,7 @@ import com.pro.types.exception.AppException;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RBlockingQueue;
 import org.redisson.api.RDelayedQueue;
+import org.redisson.api.RMap;
 import org.springframework.stereotype.Repository;
 
 import javax.annotation.Resource;
@@ -73,20 +74,32 @@ public class StrategyRepository implements IStrategyRepository {
                     .awardCountSurplus(strategyAward.getAwardCountSurplus())
                     .awardRate(strategyAward.getAwardRate())
                     .sort(strategyAward.getSort())
+                    .ruleModels(strategyAward.getRuleModels())
                     .build();
             strategyAwardEntities.add(strategyAwardEntity);
         }
         redisService.setValue(cacheKey, strategyAwardEntities);
         return strategyAwardEntities;
     }
+    // key: strategyId
+     @Override
+     public <K, V> void storeStrategyAwardSearchRateTable(String key, Integer rateRange, Map<K, V> strategyAwardSearchRateTable) {
+        String rateTableKey = Constants.RedisKey.STRATEGY_RATE_RANGE_KEY + key;
+        // 1. 存储抽奖策略范围值，如10000，用于生成1000以内的随机数
+        redisService.setValue(rateTableKey, rateRange);
+//        // 2. 存储概率查找表
+//        Map<Integer, Integer> cacheRateTable = redisService.getMap(Constants.RedisKey.STRATEGY_RATE_TABLE_KEY + key);
+//        cacheRateTable.putAll(strategyAwardSearchRateTable);
+        if(redisService.isExists(rateTableKey)){
+            redisService.remove(rateTableKey);
+        }
+        RMap<K, V> cacheRateTable = redisService.getMap(rateTableKey);
+        cacheRateTable.putAll(strategyAwardSearchRateTable);
+    }
 
     @Override
-    public void storeStrategyAwardSearchRateTable(String key, Integer rateRange, Map<Integer, Integer> strategyAwardSearchRateTable) {
-        // 1. 存储抽奖策略范围值，如10000，用于生成1000以内的随机数
-        redisService.setValue(Constants.RedisKey.STRATEGY_RATE_RANGE_KEY + key, rateRange);
-        // 2. 存储概率查找表
-        Map<Integer, Integer> cacheRateTable = redisService.getMap(Constants.RedisKey.STRATEGY_RATE_TABLE_KEY + key);
-        cacheRateTable.putAll(strategyAwardSearchRateTable);
+    public <K, V> Map<K, V> getMap(String key) {
+        return redisService.getMap(key);
     }
 
     @Override
@@ -431,5 +444,18 @@ public class StrategyRepository implements IStrategyRepository {
         }
 
         return strategyAwardStockKeyVOS;
+    }
+
+    @Override
+    public void cacheStrategyArmoryAlgorithm(String key, String beanName) {
+        String cacheKey = Constants.RedisKey.STRATEGY_ARMORY_ALGORITHM_KEY + key;
+        redisService.setValue(cacheKey, beanName);
+    }
+    // return beanName 好装配算法
+    @Override
+    public String queryStrategyArmoryAlgorithmFromCache(String key) {
+        String cacheKey = Constants.RedisKey.STRATEGY_ARMORY_ALGORITHM_KEY + key;
+        if (!redisService.isExists(cacheKey)) return null;
+        return redisService.getValue(cacheKey);
     }
 }

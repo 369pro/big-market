@@ -14,6 +14,13 @@ public interface IStrategyDispatch {
     Integer getRandomAwardId(Long strategyId, String ruleWeightValue);
 
     /**
+     * 获取抽奖策略装配的随机结果
+     *
+     * @param key = strategyId + _ + ruleWeightValue；
+     * @return 抽奖结果
+     */
+    Integer getRandomAwardId(String key);
+    /**
      * 根据策略ID和奖品ID，扣减奖品缓存库存
      *
      * @param strategyId 策略ID

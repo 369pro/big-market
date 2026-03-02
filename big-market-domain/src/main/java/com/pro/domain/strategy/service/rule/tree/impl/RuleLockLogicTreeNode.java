@@ -34,6 +34,7 @@ public class RuleLockLogicTreeNode implements ILogicTreeNode {
         } catch (NumberFormatException e) {
             throw new RuntimeException("规则过滤-次数锁异常 ruleValue: " + ruleValue + " 配置不正确");
         }
+        // 与用户活动账号有关， raffle_activity_account当天剩余活动次数，也就是抽奖次数
         // 查询用户抽奖次数 - 当天的；策略ID:活动ID 1:1 的配置，可以直接用 strategyId 查询。
         Integer userRaffleCount = repository.queryTodayUserRaffleCount(userId, strategyId);
         // 用户抽奖次数大于规则限定值，规则放行
