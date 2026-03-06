@@ -1,5 +1,14 @@
 package com.pro.domain.rebate.service;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.apache.commons.lang3.RandomStringUtils;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.springframework.stereotype.Service;
+
 import com.pro.domain.award.model.valobj.TaskStateVO;
 import com.pro.domain.rebate.event.SendRebateMessageEvent;
 import com.pro.domain.rebate.model.aggregate.BehaviorRebateAggregate;
@@ -10,13 +19,6 @@ import com.pro.domain.rebate.model.valobj.DailyBehaviorRebateVO;
 import com.pro.domain.rebate.repository.IBehaviorRebateRepository;
 import com.pro.types.common.Constants;
 import com.pro.types.event.BaseEvent;
-import org.apache.commons.lang3.RandomStringUtils;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.springframework.stereotype.Service;
-
-import javax.annotation.Resource;
-import java.util.ArrayList;
-import java.util.List;
 @Service
 public class BehaviorRebateService implements IBehaviorRebateService{
     @Resource
@@ -80,6 +82,10 @@ public class BehaviorRebateService implements IBehaviorRebateService{
     }
 
     private static SendRebateMessageEvent.@NonNull RebateMessage getRebateMessage(BehaviorEntity behaviorEntity, DailyBehaviorRebateVO dailyBehaviorRebateVO) {
+        // 防御：userId 为 null 或字符串 "null" 时，拒绝构建消息，避免脏数据流入 MQ
+        if (behaviorEntity.getUserId() == null || "null".equals(behaviorEntity.getUserId())) {
+            throw new IllegalArgumentException("BehaviorRebateService getRebateMessage userId 非法: " + behaviorEntity.getUserId());
+        }
         SendRebateMessageEvent.RebateMessage sendRebateMessage =
                 new SendRebateMessageEvent.RebateMessage();
         sendRebateMessage.setUserId(behaviorEntity.getUserId());

@@ -1,5 +1,14 @@
 package com.pro.trigger.listener;
 
+import java.math.BigDecimal;
+
+import javax.annotation.Resource;
+
+import org.springframework.amqp.rabbit.annotation.Queue;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.TypeReference;
 import com.pro.domain.activity.model.entity.SkuRechargeEntity;
@@ -13,14 +22,8 @@ import com.pro.domain.rebate.event.SendRebateMessageEvent;
 import com.pro.types.enums.ResponseCode;
 import com.pro.types.event.BaseEvent;
 import com.pro.types.exception.AppException;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.rabbit.annotation.Queue;
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
-import javax.annotation.Resource;
-import java.math.BigDecimal;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥
@@ -48,6 +51,11 @@ public class RebateMessageCustomer {
             SendRebateMessageEvent.RebateMessage rebateMessage = eventMessage.getData();
             switch (rebateMessage.getRebateType()){
                 case "sku":
+                    // 防御：userId 为真实 null 或字符串 "null" 时直接丢弃（发送方未正确赋值）
+                    if (rebateMessage.getUserId() == null || "null".equals(rebateMessage.getUserId())) {
+                        log.warn("监听用户行为返利消息，userId 为空，丢弃消息 topic: {} message: {}", topic, message);
+                        return;
+                    }
                     SkuRechargeEntity skuRechargeEntity = new SkuRechargeEntity();
                     skuRechargeEntity.setSku(Long.valueOf(rebateMessage.getRebateConfig()));
                     skuRechargeEntity.setUserId(rebateMessage.getUserId());
@@ -68,6 +76,11 @@ public class RebateMessageCustomer {
         } catch (AppException e) {
             if (ResponseCode.INDEX_DUP.getCode().equals(e.getCode())) {
                 log.warn("监听用户行为返利消息，消费重复 topic: {} message: {}", topic, message, e);
+                return;
+            }
+            // SKU 库存不足时，记录警告并丢弃消息，避免 MQ 无限重试
+            if (ResponseCode.ACTIVITY_SKU_STOCK_ERROR.getCode().equals(e.getCode())) {
+                log.warn("监听用户行为返利消息，SKU库存不足，丢弃消息 topic: {} message: {}", topic, message);
                 return;
             }
             throw e;

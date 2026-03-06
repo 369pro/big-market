@@ -31,8 +31,8 @@ public class UpdateAwardStockJob {
      * 本地化任务注解；@Scheduled(cron = "0/5 * * * * ?")
      * 分布式任务注解； @XxlJob("updateAwardStockJob")
      */
-    @XxlJob("updateAwardStockJob")
-//    @Scheduled(cron = "0 * * * * ?")
+//    @XxlJob("updateAwardStockJob")
+    @Scheduled(cron = "0 * * * * ?")
     public void exec() {
         // 为什么加锁？分布式应用N台机器部署互备，任务调度会有N个同时执行，那么这里需要增加抢占机制，谁抢占到谁就执行。完毕后，下一轮继续抢占。
         RLock lock = redissonClient.getLock("big-market-updateAwardStockJob");

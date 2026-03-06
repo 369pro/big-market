@@ -1,29 +1,33 @@
 package com.pro.infrastructure.adapter.repository;
 
-import cn.bugstack.middleware.db.router.strategy.IDBRouterStrategy;
+import java.util.concurrent.TimeUnit;
+
+import javax.annotation.Resource;
+
+import org.redisson.api.RLock;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.support.TransactionTemplate;
+
 import com.alibaba.fastjson.JSON;
+import com.pro.domain.award.model.valobj.AccountStatusVO;
 import com.pro.domain.credit.model.aggregate.TradeAggregate;
 import com.pro.domain.credit.model.entity.CreditAccountEntity;
 import com.pro.domain.credit.model.entity.CreditOrderEntity;
 import com.pro.domain.credit.model.entity.TaskEntity;
 import com.pro.domain.credit.repository.ICreditRepository;
-import com.pro.infrastructure.event.EventPublisher;
 import com.pro.infrastructure.dao.ITaskDao;
 import com.pro.infrastructure.dao.IUserCreditAccountDao;
 import com.pro.infrastructure.dao.IUserCreditOrderDao;
 import com.pro.infrastructure.dao.po.Task;
 import com.pro.infrastructure.dao.po.UserCreditAccount;
 import com.pro.infrastructure.dao.po.UserCreditOrder;
+import com.pro.infrastructure.event.EventPublisher;
 import com.pro.infrastructure.redis.IRedisService;
 import com.pro.types.common.Constants;
-import lombok.extern.slf4j.Slf4j;
-import org.redisson.api.RLock;
-import org.springframework.dao.DuplicateKeyException;
-import org.springframework.stereotype.Repository;
-import org.springframework.transaction.support.TransactionTemplate;
 
-import javax.annotation.Resource;
-import java.util.concurrent.TimeUnit;
+import cn.bugstack.middleware.db.router.strategy.IDBRouterStrategy;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥
@@ -65,6 +69,7 @@ public class CreditRepository implements ICreditRepository {
         userCreditAccountReq.setTotalAmount(creditAccountEntity.getAdjustAmount());
         // 知识；仓储往上有业务语义，仓储往下到 dao 操作是没有业务语义的。所以不用在乎这块使用的字段名称，直接用持久化对象即可。
         userCreditAccountReq.setAvailableAmount(creditAccountEntity.getAdjustAmount());
+        userCreditAccountReq.setAccountStatus(AccountStatusVO.open.getCode());
 
         // 积分订单
         UserCreditOrder userCreditOrderReq = new UserCreditOrder();
