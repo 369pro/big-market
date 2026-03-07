@@ -13,6 +13,7 @@
         <module>big-market-trigger</module>
         <module>big-market-infrastructure</module>
         <module>big-market-types</module>
+        <module>big-market-querys</module>
         <module>big-market-api</module>
     </modules>
 
@@ -184,6 +185,11 @@
             <dependency>
                 <groupId>com.pro</groupId>
                 <artifactId>big-market-trigger</artifactId>
+                <version>1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>com.pro</groupId>
+                <artifactId>big-market-querys</artifactId>
                 <version>1.0-SNAPSHOT</version>
             </dependency>
             <dependency>

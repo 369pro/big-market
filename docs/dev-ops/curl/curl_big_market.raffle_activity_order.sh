@@ -1,4 +1,4 @@
-curl -X PUT "http://127.0.0.1:9200/big_market.raffle_activity_order" -H 'Content-Type: application/json' -d'
+curl -X PUT "http://192.168.1.109:9200/big_market.raffle_activity_order" -H 'Content-Type: application/json' -d'
 {
     "mappings": {
       "properties": {
