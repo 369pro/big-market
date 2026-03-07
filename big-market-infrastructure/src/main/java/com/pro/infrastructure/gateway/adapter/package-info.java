@@ -1,1 +1,0 @@
-package com.pro.infrastructure.gateway.adapter;

@@ -1,6 +1,6 @@
 package com.pro.domain.award.service;
 
-import com.pro.domain.award.event.SendAwardMessageEvent;
+import com.pro.domain.award.adapter.event.SendAwardMessageEvent;
 import com.pro.domain.award.model.aggregate.UserAwardRecordAggregate;
 import com.pro.domain.award.model.entity.DistributeAwardEntity;
 import com.pro.domain.award.model.entity.TaskEntity;
@@ -66,7 +66,7 @@ public class AwardService implements IAwardService {
     }
 
     @Override
-    public void distributeAward(DistributeAwardEntity distributeAwardEntity) {
+    public void distributeAward(DistributeAwardEntity distributeAwardEntity) throws Exception {
         // 奖品Key
         String awardKey = awardRepository.queryAwardKey(distributeAwardEntity.getAwardId());
         if (null == awardKey) {

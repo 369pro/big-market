@@ -1,27 +1,57 @@
 package com.pro.infrastructure.adapter.repository;
 
-import com.pro.domain.strategy.model.entity.StrategyAwardEntity;
-import com.pro.domain.strategy.model.entity.StrategyEntity;
-import com.pro.domain.strategy.model.entity.StrategyRuleEntity;
-import com.pro.domain.strategy.model.valobj.*;
-import com.pro.domain.strategy.repository.IStrategyRepository;
-import com.pro.domain.strategy.service.rule.chain.factory.DefaultChainFactory;
-import com.pro.infrastructure.dao.*;
-import com.pro.infrastructure.dao.po.*;
-import com.pro.infrastructure.redis.IRedisService;
-import com.pro.types.common.Constants;
-import com.pro.types.exception.AppException;
-import lombok.extern.slf4j.Slf4j;
+import static com.pro.types.enums.ResponseCode.UN_ASSEMBLED_STRATEGY_ARMORY;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+
+import javax.annotation.Resource;
+
 import org.redisson.api.RBlockingQueue;
 import org.redisson.api.RDelayedQueue;
 import org.redisson.api.RMap;
 import org.springframework.stereotype.Repository;
 
-import javax.annotation.Resource;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
+import com.pro.domain.strategy.model.entity.StrategyAwardEntity;
+import com.pro.domain.strategy.model.entity.StrategyEntity;
+import com.pro.domain.strategy.model.entity.StrategyRuleEntity;
+import com.pro.domain.strategy.model.valobj.RuleLimitTypeVO;
+import com.pro.domain.strategy.model.valobj.RuleLogicCheckTypeVO;
+import com.pro.domain.strategy.model.valobj.RuleTreeNodeLineVO;
+import com.pro.domain.strategy.model.valobj.RuleTreeNodeVO;
+import com.pro.domain.strategy.model.valobj.RuleTreeVO;
+import com.pro.domain.strategy.model.valobj.RuleWeightVO;
+import com.pro.domain.strategy.model.valobj.StrategyAwardRuleModelVO;
+import com.pro.domain.strategy.model.valobj.StrategyAwardStockKeyVO;
+import com.pro.domain.strategy.repository.IStrategyRepository;
+import com.pro.domain.strategy.service.rule.chain.factory.DefaultChainFactory;
+import com.pro.infrastructure.dao.IRaffleActivityAccountDao;
+import com.pro.infrastructure.dao.IRaffleActivityAccountDayDao;
+import com.pro.infrastructure.dao.IRaffleActivityDao;
+import com.pro.infrastructure.dao.IRuleTreeDao;
+import com.pro.infrastructure.dao.IRuleTreeNodeDao;
+import com.pro.infrastructure.dao.IRuleTreeNodeLineDao;
+import com.pro.infrastructure.dao.IStrategyAwardDao;
+import com.pro.infrastructure.dao.IStrategyDao;
+import com.pro.infrastructure.dao.IStrategyRuleDao;
+import com.pro.infrastructure.dao.po.RaffleActivityAccount;
+import com.pro.infrastructure.dao.po.RaffleActivityAccountDay;
+import com.pro.infrastructure.dao.po.RuleTree;
+import com.pro.infrastructure.dao.po.RuleTreeNode;
+import com.pro.infrastructure.dao.po.RuleTreeNodeLine;
+import com.pro.infrastructure.dao.po.Strategy;
+import com.pro.infrastructure.dao.po.StrategyAward;
+import com.pro.infrastructure.dao.po.StrategyRule;
+import com.pro.infrastructure.redis.IRedisService;
+import com.pro.types.common.Constants;
+import com.pro.types.exception.AppException;
 
-import static com.pro.types.enums.ResponseCode.UN_ASSEMBLED_STRATEGY_ARMORY;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥
@@ -84,12 +114,12 @@ public class StrategyRepository implements IStrategyRepository {
     // key: strategyId
      @Override
      public <K, V> void storeStrategyAwardSearchRateTable(String key, Integer rateRange, Map<K, V> strategyAwardSearchRateTable) {
-        String rateTableKey = Constants.RedisKey.STRATEGY_RATE_RANGE_KEY + key;
-        // 1. 存储抽奖策略范围值，如10000，用于生成1000以内的随机数
-        redisService.setValue(rateTableKey, rateRange);
+         // 1. 存储抽奖策略范围值，如10000，用于生成1000以内的随机数
+         redisService.setValue(Constants.RedisKey.STRATEGY_RATE_RANGE_KEY + key, rateRange);
 //        // 2. 存储概率查找表
 //        Map<Integer, Integer> cacheRateTable = redisService.getMap(Constants.RedisKey.STRATEGY_RATE_TABLE_KEY + key);
 //        cacheRateTable.putAll(strategyAwardSearchRateTable);
+         String rateTableKey = Constants.RedisKey.STRATEGY_RATE_TABLE_KEY + key;
         if(redisService.isExists(rateTableKey)){
             redisService.remove(rateTableKey);
         }

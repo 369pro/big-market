@@ -13,5 +13,5 @@ public interface IAwardService {
 
     void saveUserAwardRecord(UserAwardRecordEntity userAwardRecordEntity);
 
-    void distributeAward(DistributeAwardEntity distributeAwardEntity);
+    void distributeAward(DistributeAwardEntity distributeAwardEntity) throws Exception;
 }

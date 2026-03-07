@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.TypeReference;
-import com.pro.domain.award.event.SendAwardMessageEvent;
+import com.pro.domain.award.adapter.event.SendAwardMessageEvent;
 import com.pro.domain.award.model.entity.DistributeAwardEntity;
 import com.pro.domain.award.service.IAwardService;
 import com.pro.types.event.BaseEvent;
@@ -31,7 +31,7 @@ public class SendAwardCustomer {
     private String topic;
 
     @RabbitListener(queuesToDeclare = @Queue(value = "${spring.rabbitmq.topic.send_award}"))
-    public void listener(String message) {
+    public void listener(String message) throws Exception {
         try {
             log.info("监听用户奖品发送消息，发奖开始 topic: {} message: {}", topic, message);
             BaseEvent.EventMessage<SendAwardMessageEvent.SendAwardMessage> eventMessage = JSON.parseObject(message, new TypeReference<BaseEvent.EventMessage<SendAwardMessageEvent.SendAwardMessage>>() {

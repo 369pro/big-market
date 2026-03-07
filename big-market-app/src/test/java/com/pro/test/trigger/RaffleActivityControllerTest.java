@@ -1,12 +1,11 @@
 package com.pro.test.trigger;
 
-import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
 
-import javax.annotation.Resource;
-
+import com.alibaba.fastjson.JSON;
+import com.pro.trigger.api.IRaffleActivityService;
+import com.pro.trigger.api.dto.*;
+import com.pro.trigger.api.response.Response;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -14,17 +13,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import com.alibaba.fastjson.JSON;
-import com.pro.trigger.api.IRaffleActivityService;
-import com.pro.trigger.api.dto.ActivityDrawRequestDTO;
-import com.pro.trigger.api.dto.ActivityDrawResponseDTO;
-import com.pro.trigger.api.dto.SkuProductResponseDTO;
-import com.pro.trigger.api.dto.SkuProductShopCartRequestDTO;
-import com.pro.trigger.api.dto.UserActivityAccountRequestDTO;
-import com.pro.trigger.api.dto.UserActivityAccountResponseDTO;
-import com.pro.trigger.api.response.Response;
-
-import lombok.extern.slf4j.Slf4j;
+import javax.annotation.Resource;
+import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥
@@ -44,41 +37,28 @@ public class RaffleActivityControllerTest {
 
     @Test
     public void test_armory() {
-        Response<Boolean> response = raffleActivityService.armory(100301L);
+        Response<Boolean> response = raffleActivityService.armory(100401L);
         log.info("测试结果：{}", JSON.toJSONString(response));
     }
 
     @Test
+    public void test_set_dcc_value() throws Exception {
+        curatorFramework.setData().forPath("/big-market-dcc/config/degradeSwitch", "close".getBytes(StandardCharsets.UTF_8));
+    }
+
+    @Test
     public void test_draw() throws InterruptedException {
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 1; i++) {
             ActivityDrawRequestDTO request = new ActivityDrawRequestDTO();
-            request.setActivityId(100301L);
-            request.setUserId("xiaofuge");
+            request.setActivityId(100401L);
+            request.setUserId("xfg");
             Response<ActivityDrawResponseDTO> response = raffleActivityService.draw(request);
 
             log.info("请求参数：{}", JSON.toJSONString(request));
             log.info("测试结果：{}", JSON.toJSONString(response));
         }
+
         new CountDownLatch(1).await();
-    }
-
-    @Test
-    public void test_calendarSignRebate(){
-        Response<Boolean> response = raffleActivityService.calendarSignRebate("xiaofuge00");
-        log.info("测试结果：{}", JSON.toJSONString(response));
-    }
-
-    @Test
-    public void test_queryUserActivityAccount() {
-        UserActivityAccountRequestDTO request = new UserActivityAccountRequestDTO();
-        request.setActivityId(100301L);
-        request.setUserId("xiaofuge");
-
-        // 查询数据
-        Response<UserActivityAccountResponseDTO> response = raffleActivityService.queryUserActivityAccount(request);
-
-        log.info("请求参数：{}", JSON.toJSONString(request));
-        log.info("测试结果：{}", JSON.toJSONString(response));
     }
 
     @Test
@@ -93,6 +73,34 @@ public class RaffleActivityControllerTest {
 
         // 让程序挺住方便测试，也可以去掉
 //        new CountDownLatch(1).await();
+    }
+
+    @Test
+    public void test_calendarSignRebate() throws InterruptedException {
+        Response<Boolean> response = raffleActivityService.calendarSignRebate("xfg");
+        log.info("测试结果：{}", JSON.toJSONString(response));
+
+        // 让程序挺住方便测试，也可以去掉
+        new CountDownLatch(1).await();
+    }
+
+    @Test
+    public void test_isCalendarSignRebate() {
+        Response<Boolean> response = raffleActivityService.isCalendarSignRebate("xfg");
+        log.info("测试结果：{}", JSON.toJSONString(response));
+    }
+
+    @Test
+    public void test_queryUserActivityAccount() {
+        UserActivityAccountRequestDTO request = new UserActivityAccountRequestDTO();
+        request.setActivityId(100301L);
+        request.setUserId("xiaofuge");
+
+        // 查询数据
+        Response<UserActivityAccountResponseDTO> response = raffleActivityService.queryUserActivityAccount(request);
+
+        log.info("请求参数：{}", JSON.toJSONString(request));
+        log.info("测试结果：{}", JSON.toJSONString(response));
     }
 
     @Test
@@ -115,7 +123,7 @@ public class RaffleActivityControllerTest {
     public void test_creditPayExchangeSku() throws InterruptedException {
         SkuProductShopCartRequestDTO request = new SkuProductShopCartRequestDTO();
         request.setUserId("xiaofuge");
-        request.setSku(9011L);
+        request.setSku(9014L);
         Response<Boolean> response = raffleActivityService.creditPayExchangeSku(request);
         log.info("请求参数：{}", JSON.toJSONString(request));
         log.info("测试结果：{}", JSON.toJSONString(response));
@@ -123,8 +131,4 @@ public class RaffleActivityControllerTest {
         new CountDownLatch(1).await();
     }
 
-    @Test
-    public void test_set_dcc_value() throws Exception {
-        curatorFramework.setData().forPath("/big-market-dcc/config/degradeSwitch", "close".getBytes(StandardCharsets.UTF_8));
-    }
 }

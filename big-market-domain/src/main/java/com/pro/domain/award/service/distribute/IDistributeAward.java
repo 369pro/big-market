@@ -10,6 +10,6 @@ import com.pro.domain.award.model.entity.DistributeAwardEntity;
  */
 public interface IDistributeAward {
 
-    void giveOutPrizes(DistributeAwardEntity distributeAwardEntity);
+    void giveOutPrizes(DistributeAwardEntity distributeAwardEntity) throws Exception;
 
 }

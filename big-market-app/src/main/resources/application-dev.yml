@@ -171,6 +171,16 @@ xxl:
       # 执行器日志文件保存天数 [选填] ： 过期日志自动清理, 限制值大于等于3时生效; 否则, 如-1, 关闭自动清理功能；
       logretentiondays: 30
 
+# 外部接口调用配置
+gateway:
+  config:
+    # 状态；true = 开启、false 关闭
+    enable: true
+    apiHost: http://127.0.0.1:8091
+    # big-market 大营销接口调用配置
+    big-market-appId: big-market
+    big-market-appToken: 6ec604541f8b1ce4a
+
 # 日志；logstash部署的服务器IP
 logstash:
   host: 111.228.31.22

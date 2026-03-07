@@ -165,6 +165,22 @@
                 <artifactId>logstash-logback-encoder</artifactId>
                 <version>7.3</version>
             </dependency>
+            <!-- 对接openai项目-->
+            <dependency>
+                <groupId>com.squareup.retrofit2</groupId>
+                <artifactId>retrofit</artifactId>
+                <version>2.9.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.squareup.retrofit2</groupId>
+                <artifactId>converter-jackson</artifactId>
+                <version>2.9.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.squareup.retrofit2</groupId>
+                <artifactId>adapter-rxjava2</artifactId>
+                <version>2.9.0</version>
+            </dependency>
 
             <!-- 工程模块 -->
             <dependency>

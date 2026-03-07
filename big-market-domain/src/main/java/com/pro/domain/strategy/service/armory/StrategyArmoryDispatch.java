@@ -43,7 +43,7 @@ public class StrategyArmoryDispatch extends AbstractStrategyAlgorithm {
         // 2. 概率范围值
         double rateRange = convert(minAwardRate.doubleValue());
         // 3. 根据概率值范围选择算法
-        if(rateRange < ALGORITHM_THRESHOLD_VALUE){
+        if(rateRange < ALGORITHM_THRESHOLD_VALUE*100){
             // 选择O(1)抽奖算法
             String beanName = AbstractAlgorithm.Algorithm.O1.getKey();
             IAlgorithm o1Algorithm = algorithmMap.get(beanName);

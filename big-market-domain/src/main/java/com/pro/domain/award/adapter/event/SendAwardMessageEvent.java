@@ -1,4 +1,4 @@
-package com.pro.domain.award.event;
+package com.pro.domain.award.adapter.event;
 
 import com.pro.types.event.BaseEvent;
 import lombok.AllArgsConstructor;

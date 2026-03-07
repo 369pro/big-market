@@ -1,6 +1,6 @@
 package com.pro.domain.award.model.entity;
 
-import com.pro.domain.award.event.SendAwardMessageEvent;
+import com.pro.domain.award.adapter.event.SendAwardMessageEvent;
 import com.pro.domain.award.model.valobj.TaskStateVO;
 import com.pro.types.event.BaseEvent;
 import lombok.AllArgsConstructor;

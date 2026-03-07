@@ -1,17 +1,24 @@
 package com.pro.domain.strategy.service.armory.algorithm.impl;
 
-import com.pro.domain.strategy.model.entity.StrategyAwardEntity;
-import com.pro.domain.strategy.service.armory.algorithm.AbstractAlgorithm;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-
-import javax.annotation.Resource;
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.stream.Collectors;
+
+import javax.annotation.Resource;
+
+import org.springframework.stereotype.Component;
+
+import com.pro.domain.strategy.model.entity.StrategyAwardEntity;
+import com.pro.domain.strategy.service.armory.algorithm.AbstractAlgorithm;
+
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥
@@ -45,7 +52,10 @@ public class OLogNAlgorithm extends AbstractAlgorithm {
             BigDecimal awardRate = strategyAwardEntity.getAwardRate();
             int intervalLen = rateRange.multiply(awardRate).intValue();
             to += intervalLen;
-            table.put(new HashMap<>(from, to), awardId);
+            // 注意：不能用 new HashMap<>(from, to)，那是容量构造器！必须先创建再put
+            Map<Integer, Integer> rangeMap = new HashMap<>();
+            rangeMap.put(from, to);
+            table.put(rangeMap, awardId);
             from = to + 1;
         }
         //
@@ -85,7 +95,8 @@ public class OLogNAlgorithm extends AbstractAlgorithm {
             int start = Integer.parseInt(range.getKey());
             int end = range.getValue();
             if(start <= rateKey && rateKey <= end){
-                awardId = range.getValue();
+                // 注意：应取 tableEntry.getValue()（awardId），而非 range.getValue()（to端点）
+                awardId = tableEntry.getValue();
                 break;
             }
         }
