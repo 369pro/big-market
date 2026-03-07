@@ -1,17 +1,11 @@
 package com.pro.trigger.api;
 
 
+import com.pro.trigger.api.dto.*;
+import com.pro.trigger.api.response.Response;
 
 import java.math.BigDecimal;
 import java.util.List;
-
-import com.pro.trigger.api.dto.ActivityDrawRequestDTO;
-import com.pro.trigger.api.dto.ActivityDrawResponseDTO;
-import com.pro.trigger.api.dto.SkuProductResponseDTO;
-import com.pro.trigger.api.dto.SkuProductShopCartRequestDTO;
-import com.pro.trigger.api.dto.UserActivityAccountRequestDTO;
-import com.pro.trigger.api.dto.UserActivityAccountResponseDTO;
-import com.pro.trigger.api.response.Response;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥
@@ -34,7 +28,23 @@ public interface IRaffleActivityService {
      * @param request 请求对象
      * @return 返回结果
      */
+    Response<ActivityDrawResponseDTO> draw(String token, ActivityDrawRequestDTO request);
+
+    /**
+     * 活动抽奖接口
+     *
+     * @param request 请求对象
+     * @return 返回结果
+     */
     Response<ActivityDrawResponseDTO> draw(ActivityDrawRequestDTO request);
+
+    /**
+     * 日历签到返利接口
+     *
+     * @param token 登录Token
+     * @return 签到结果
+     */
+    Response<Boolean> calendarSignRebateByToken(String token);
 
     /**
      * 日历签到返利接口
@@ -47,10 +57,27 @@ public interface IRaffleActivityService {
     /**
      * 判断是否完成日历签到返利接口
      *
+     * @param token token
+     * @return 签到结果 true 已签到，false 未签到
+     */
+    Response<Boolean> isCalendarSignRebateByToken(String token);
+
+    /**
+     * 判断是否完成日历签到返利接口
+     *
      * @param userId 用户ID
      * @return 签到结果 true 已签到，false 未签到
      */
     Response<Boolean> isCalendarSignRebate(String userId);
+
+    /**
+     * 查询用户活动账户
+     *
+     * @param token 鉴权token
+     * @param request 请求对象「活动ID、用户ID」
+     * @return 返回结果「总额度、月额度、日额度」
+     */
+    Response<UserActivityAccountResponseDTO> queryUserActivityAccount(String token, UserActivityAccountRequestDTO request);
 
     /**
      * 查询用户活动账户
@@ -68,6 +95,8 @@ public interface IRaffleActivityService {
      */
     Response<List<SkuProductResponseDTO>> querySkuProductListByActivityId(Long activityId);
 
+    Response<BigDecimal> queryUserCreditAccountByToken(String token);
+
     /**
      * 查询用户积分值
      *
@@ -76,10 +105,11 @@ public interface IRaffleActivityService {
      */
     Response<BigDecimal> queryUserCreditAccount(String userId);
 
+    Response<Boolean> creditPayExchangeSku(String token, SkuProductShopCartRequestDTO request);
+
     /**
      * 积分支付兑换商品
-     * 包含两步：1. 创建兑换商品sku订单
-     * 2. 支付兑换商品
+     *
      * @param request 请求对象「用户ID、商品ID」
      * @return 兑换结果
      */
