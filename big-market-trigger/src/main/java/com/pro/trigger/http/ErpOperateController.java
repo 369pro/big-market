@@ -1,17 +1,20 @@
 package com.pro.trigger.http;
 
+import com.alibaba.fastjson.JSON;
 import com.pro.adapter.repository.IESUserRaffleOrderRepository;
+import com.pro.domain.activity.model.entity.RaffleActivityStageEntity;
+import com.pro.domain.activity.service.IRaffleActivityStageService;
+import com.pro.domain.activity.service.armory.IActivityArmory;
 import com.pro.model.valobj.ESUserRaffleOrderVO;
 import com.pro.trigger.api.IErpOperateService;
 import com.pro.trigger.api.dto.ESUserRaffleOrderResponseDTO;
+import com.pro.trigger.api.dto.RaffleActivityStageResponseDTO;
+import com.pro.trigger.api.dto.UpdateStageActivity2ActiveRequestDTO;
 import com.pro.trigger.api.response.Response;
 import com.pro.types.enums.ResponseCode;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboService;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
@@ -31,6 +34,10 @@ public class ErpOperateController implements IErpOperateService {
 
     @Resource
     private IESUserRaffleOrderRepository userRaffleOrderRepository;
+    @Resource
+    private IRaffleActivityStageService raffleActivityStageService;
+    @Resource
+    private IActivityArmory activityArmory;
 
     /**
      * 查询运营数据，用户抽奖单列表
@@ -66,6 +73,68 @@ public class ErpOperateController implements IErpOperateService {
         } catch (Exception e) {
             log.error("查询运营数据，用户抽奖单列表", e);
             return Response.<List<ESUserRaffleOrderResponseDTO>>builder()
+                    .code(ResponseCode.UN_ERROR.getCode())
+                    .info(ResponseCode.UN_ERROR.getInfo())
+                    .build();
+        }
+    }
+
+    @RequestMapping(value = "update_stage_activity_2_active", method = RequestMethod.POST)
+    @Override
+    public Response<Boolean> updateStageActivity2Active(@RequestBody UpdateStageActivity2ActiveRequestDTO requestDTO) {
+        try {
+            Long id = requestDTO.getId();
+            log.info("更新上架活动状态为生效开始 id:{}", id);
+            Long activityId = raffleActivityStageService.queryStageActivity2ActiveById(id);
+            boolean assembled = activityArmory.assembleActivitySkuByActivityId(activityId);
+            log.info("更新上架活动状态为装配完成 activityId:{} assembled:{}", activityId, assembled);
+
+            raffleActivityStageService.updateStageActivity2Active(id);
+            log.info("更新上架活动状态为生效完成 activityId:{}", activityId);
+
+            return Response.<Boolean>builder()
+                    .code(ResponseCode.SUCCESS.getCode())
+                    .info(ResponseCode.SUCCESS.getInfo())
+                    .data(true)
+                    .build();
+        } catch (Exception e) {
+            log.error("更新上架活动状态为生效开始，失败 id:{}", requestDTO.getId(), e);
+            return Response.<Boolean>builder()
+                    .code(ResponseCode.UN_ERROR.getCode())
+                    .info(ResponseCode.UN_ERROR.getInfo())
+                    .build();
+        }
+    }
+
+    @RequestMapping(value = "query_raffle_activity_stage_list", method = RequestMethod.GET)
+    @Override
+    public Response<List<RaffleActivityStageResponseDTO>> queryRaffleActivityStageList() {
+        try {
+            List<RaffleActivityStageResponseDTO> raffleActivityStageResponseDTOS = new ArrayList<>();
+            List<RaffleActivityStageEntity> raffleActivityStageEntities = raffleActivityStageService.queryStageActivityList();
+            for (RaffleActivityStageEntity raffleActivityStage : raffleActivityStageEntities) {
+                RaffleActivityStageResponseDTO raffleActivityStageResponseDTO = RaffleActivityStageResponseDTO.builder()
+                        .id(raffleActivityStage.getId())
+                        .channel(raffleActivityStage.getChannel())
+                        .source(raffleActivityStage.getSource())
+                        .activityId(raffleActivityStage.getActivityId())
+                        .state(raffleActivityStage.getState())
+                        .build();
+                raffleActivityStageResponseDTOS.add(raffleActivityStageResponseDTO);
+            }
+
+            Response<List<RaffleActivityStageResponseDTO>> response = Response.<List<RaffleActivityStageResponseDTO>>builder()
+                    .code(ResponseCode.SUCCESS.getCode())
+                    .info(ResponseCode.SUCCESS.getInfo())
+                    .data(raffleActivityStageResponseDTOS)
+                    .build();
+
+            log.info("查询上架活动数据 {}", JSON.toJSONString(response));
+
+            return response;
+        } catch (Exception e) {
+            log.error("查询上架活动数据失败", e);
+            return Response.<List<RaffleActivityStageResponseDTO>>builder()
                     .code(ResponseCode.UN_ERROR.getCode())
                     .info(ResponseCode.UN_ERROR.getInfo())
                     .build();

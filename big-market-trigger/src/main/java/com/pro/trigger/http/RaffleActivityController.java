@@ -1,6 +1,5 @@
 package com.pro.trigger.http;
 
-
 import com.alibaba.fastjson.JSON;
 import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
 import com.netflix.hystrix.contrib.javanica.annotation.HystrixProperty;
@@ -9,6 +8,7 @@ import com.pro.domain.activity.model.valobj.OrderTradeTypeVO;
 import com.pro.domain.activity.service.IRaffleActivityAccountQuotaService;
 import com.pro.domain.activity.service.IRaffleActivityPartakeService;
 import com.pro.domain.activity.service.IRaffleActivitySkuProductService;
+import com.pro.domain.activity.service.IRaffleActivityStageService;
 import com.pro.domain.activity.service.armory.IActivityArmory;
 import com.pro.domain.auth.service.IAuthService;
 import com.pro.domain.award.model.entity.UserAwardRecordEntity;
@@ -81,10 +81,32 @@ public class RaffleActivityController implements IRaffleActivityService {
     private ICreditAdjustService creditAdjustService;
     @Resource
     private IAuthService authService;
+    @Resource
+    private IRaffleActivityStageService raffleActivityStageService;
 
     // dcc 统一配置中心动态配置降级开关
     @DCCValue("degradeSwitch:close")
     private String degradeSwitch;
+
+    @RequestMapping(value = "query_stage_activity_id", method = RequestMethod.GET)
+    @Override
+    public Response<Long> queryStageActivityId(@RequestParam String channel, @RequestParam String source) {
+        try {
+            Long activityId = raffleActivityStageService.queryStageActivityId(channel, source);
+            log.info("查询上架活动ID channel:{} source:{} activity:{}", channel, source, activityId);
+            return Response.<Long>builder()
+                    .code(ResponseCode.SUCCESS.getCode())
+                    .info(ResponseCode.SUCCESS.getInfo())
+                    .data(activityId)
+                    .build();
+        } catch (Exception e) {
+            log.info("查询上架活动ID异常 channel:{} source:{}", channel, source, e);
+            return Response.<Long>builder()
+                    .code(ResponseCode.UN_ERROR.getCode())
+                    .info(ResponseCode.UN_ERROR.getInfo())
+                    .build();
+        }
+    }
 
     /**
      * 活动装配 - 数据预热 | 把活动配置的对应的 sku 一起装配

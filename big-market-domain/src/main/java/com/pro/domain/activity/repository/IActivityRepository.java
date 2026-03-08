@@ -65,4 +65,15 @@ public interface IActivityRepository {
     UnpaidActivityOrderEntity queryUnpaidActivityOrder(SkuRechargeEntity skuRechargeEntity);
 
     List<SkuProductEntity> querySkuProductEntityListByActivityId(Long activityId);
+
+    void appendStageActivity(String channel, String source, Long activityId);
+
+    void updateStageActivity2Active(Long id);
+
+    Long queryStageActiveBySC(String channel, String source);
+
+    List<RaffleActivityStageEntity> queryStageActivityList();
+
+    Long queryStageActivity2ActiveById(Long id);
+
 }

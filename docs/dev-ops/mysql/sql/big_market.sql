@@ -7,7 +7,7 @@
 #
 # 主机: 127.0.0.1 (MySQL 5.6.39)
 # 数据库: big_market
-# 生成时间: 2024-10-20 10:30:27 +0000
+# 生成时间: 2024-10-27 02:25:53 +0000
 # ************************************************************
 
 
@@ -203,6 +203,33 @@ VALUES
 	(7,9903,100401,22203,100000,100000,20.00,'2024-03-16 11:41:09','2024-10-19 14:42:46');
 
 /*!40000 ALTER TABLE `raffle_activity_sku` ENABLE KEYS */;
+UNLOCK TABLES;
+
+
+# 转储表 raffle_activity_stage
+# ------------------------------------------------------------
+
+DROP TABLE IF EXISTS `raffle_activity_stage`;
+
+CREATE TABLE `raffle_activity_stage` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `channel` varchar(8) NOT NULL COMMENT '渠道',
+  `source` varchar(8) NOT NULL COMMENT '来源',
+  `activity_id` bigint(12) NOT NULL COMMENT '活动ID',
+  `state` varchar(8) NOT NULL DEFAULT 'create' COMMENT '上架状态；create、active、expire',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='活动展台 - 上架活动';
+
+LOCK TABLES `raffle_activity_stage` WRITE;
+/*!40000 ALTER TABLE `raffle_activity_stage` DISABLE KEYS */;
+
+INSERT INTO `raffle_activity_stage` (`id`, `channel`, `source`, `activity_id`, `state`, `create_time`, `update_time`)
+VALUES
+	(1,'c01','s01',100401,'active','2024-10-26 19:01:42','2024-10-26 19:49:33');
+
+/*!40000 ALTER TABLE `raffle_activity_stage` ENABLE KEYS */;
 UNLOCK TABLES;
 
 

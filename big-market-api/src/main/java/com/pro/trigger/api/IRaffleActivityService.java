@@ -15,6 +15,15 @@ import java.util.List;
 public interface IRaffleActivityService {
 
     /**
+     * 根据sc值，查询上架的活动ID
+     *
+     * @param channel 渠道
+     * @param source  来源
+     * @return 活动ID
+     */
+    Response<Long> queryStageActivityId(String channel, String source);
+
+    /**
      * 活动装配，数据预热缓存
      *
      * @param activityId 活动ID

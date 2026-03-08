@@ -9,6 +9,8 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.Resource;
 
 import com.pro.domain.activity.model.entity.*;
+import com.pro.infrastructure.dao.*;
+import com.pro.infrastructure.dao.po.*;
 import com.pro.infrastructure.redis.IRedisService;
 import org.redisson.api.RBlockingQueue;
 import org.redisson.api.RDelayedQueue;
@@ -25,22 +27,6 @@ import com.pro.domain.activity.model.valobj.ActivityStateVO;
 import com.pro.domain.activity.model.valobj.UserRaffleOrderStateVO;
 import com.pro.domain.activity.repository.IActivityRepository;
 import com.pro.infrastructure.event.EventPublisher;
-import com.pro.infrastructure.dao.IRaffleActivityAccountDao;
-import com.pro.infrastructure.dao.IRaffleActivityAccountDayDao;
-import com.pro.infrastructure.dao.IRaffleActivityAccountMonthDao;
-import com.pro.infrastructure.dao.IRaffleActivityCountDao;
-import com.pro.infrastructure.dao.IRaffleActivityDao;
-import com.pro.infrastructure.dao.IRaffleActivityOrderDao;
-import com.pro.infrastructure.dao.IRaffleActivitySkuDao;
-import com.pro.infrastructure.dao.IUserRaffleOrderDao;
-import com.pro.infrastructure.dao.po.RaffleActivity;
-import com.pro.infrastructure.dao.po.RaffleActivityAccount;
-import com.pro.infrastructure.dao.po.RaffleActivityAccountDay;
-import com.pro.infrastructure.dao.po.RaffleActivityAccountMonth;
-import com.pro.infrastructure.dao.po.RaffleActivityCount;
-import com.pro.infrastructure.dao.po.RaffleActivityOrder;
-import com.pro.infrastructure.dao.po.RaffleActivitySku;
-import com.pro.infrastructure.dao.po.UserRaffleOrder;
 import com.pro.types.common.Constants;
 import com.pro.types.enums.ResponseCode;
 import com.pro.types.exception.AppException;
@@ -83,6 +69,8 @@ public class ActivityRepository implements IActivityRepository {
     private ActivitySkuStockZeroMessageEvent activitySkuStockZeroMessageEvent;
     @Resource
     private EventPublisher eventPublisher;
+    @Resource
+    private IRaffleActivityStageDao raffleActivityStageDao;
 
     // 因为这里才要预先装配
     @Override
@@ -766,5 +754,50 @@ public class ActivityRepository implements IActivityRepository {
 
         }
         return skuProductEntities;
+    }
+
+    @Override
+    public void appendStageActivity(String channel, String source, Long activityId) {
+        RaffleActivityStage raffleActivityStage = new RaffleActivityStage();
+        raffleActivityStage.setChannel(channel);
+        raffleActivityStage.setSource(source);
+        raffleActivityStage.setActivityId(activityId);
+        raffleActivityStageDao.insert(raffleActivityStage);
+    }
+
+    @Override
+    public void updateStageActivity2Active(Long id) {
+        // 更新上架状态
+        raffleActivityStageDao.updateStageActivity2ActiveById(id);
+    }
+
+    @Override
+    public Long queryStageActiveBySC(String channel, String source) {
+        RaffleActivityStage raffleActivityStage = new RaffleActivityStage();
+        raffleActivityStage.setChannel(channel);
+        raffleActivityStage.setSource(source);
+        return raffleActivityStageDao.queryStageActiveBySC(raffleActivityStage);
+    }
+
+    @Override
+    public List<RaffleActivityStageEntity> queryStageActivityList() {
+        List<RaffleActivityStageEntity> raffleActivityStageEntities = new ArrayList<>();
+        List<RaffleActivityStage> list = raffleActivityStageDao.queryStageActivityList();
+        for (RaffleActivityStage raffleActivityStage : list) {
+            RaffleActivityStageEntity raffleActivityStageEntity = RaffleActivityStageEntity.builder()
+                    .id(raffleActivityStage.getId())
+                    .channel(raffleActivityStage.getChannel())
+                    .source(raffleActivityStage.getSource())
+                    .activityId(raffleActivityStage.getActivityId())
+                    .state(raffleActivityStage.getState())
+                    .build();
+            raffleActivityStageEntities.add(raffleActivityStageEntity);
+        }
+        return raffleActivityStageEntities;
+    }
+
+    @Override
+    public Long queryStageActivity2ActiveById(Long id) {
+        return raffleActivityStageDao.queryStageActivity2ActiveById(id);
     }
 }
