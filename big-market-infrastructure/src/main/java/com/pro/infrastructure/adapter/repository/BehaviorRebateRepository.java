@@ -1,29 +1,32 @@
 package com.pro.infrastructure.adapter.repository;
 
-import cn.bugstack.middleware.db.router.strategy.IDBRouterStrategy;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionTemplate;
+
 import com.alibaba.fastjson.JSON;
 import com.pro.domain.rebate.model.aggregate.BehaviorRebateAggregate;
 import com.pro.domain.rebate.model.entity.BehaviorRebateOrderEntity;
 import com.pro.domain.rebate.model.entity.TaskEntity;
 import com.pro.domain.rebate.model.valobj.DailyBehaviorRebateVO;
 import com.pro.domain.rebate.repository.IBehaviorRebateRepository;
-import com.pro.infrastructure.event.EventPublisher;
 import com.pro.infrastructure.dao.IDailyBehaviorRebateDao;
 import com.pro.infrastructure.dao.ITaskDao;
 import com.pro.infrastructure.dao.IUserBehaviorRebateOrderDao;
 import com.pro.infrastructure.dao.po.DailyBehaviorRebate;
 import com.pro.infrastructure.dao.po.Task;
 import com.pro.infrastructure.dao.po.UserBehaviorRebateOrder;
+import com.pro.infrastructure.event.EventPublisher;
 import com.pro.types.enums.ResponseCode;
 import com.pro.types.exception.AppException;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DuplicateKeyException;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.support.TransactionTemplate;
 
-import javax.annotation.Resource;
-import java.util.ArrayList;
-import java.util.List;
+import cn.bugstack.middleware.db.router.strategy.IDBRouterStrategy;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
@@ -116,6 +119,26 @@ public class BehaviorRebateRepository implements IBehaviorRebateRepository {
 
     @Override
     public List<BehaviorRebateOrderEntity> queryOrderByOutBusinessNo(String userId, String outBusinessNo) {
-        return userBehaviorRebateOrderDao.queryOrderByOutBusinessNo(userId, outBusinessNo);
+        try {
+            dbRouter.doRouter(userId);
+            List<UserBehaviorRebateOrder> userBehaviorRebateOrders = userBehaviorRebateOrderDao.queryOrderByOutBusinessNo(userId, outBusinessNo);
+            List<BehaviorRebateOrderEntity> behaviorRebateOrderEntities = new ArrayList<>(userBehaviorRebateOrders.size());
+            for (UserBehaviorRebateOrder userBehaviorRebateOrder : userBehaviorRebateOrders) {
+                BehaviorRebateOrderEntity behaviorRebateOrderEntity = BehaviorRebateOrderEntity.builder()
+                        .userId(userBehaviorRebateOrder.getUserId())
+                        .orderId(userBehaviorRebateOrder.getOrderId())
+                        .behaviorType(userBehaviorRebateOrder.getBehaviorType())
+                        .rebateDesc(userBehaviorRebateOrder.getRebateDesc())
+                        .rebateType(userBehaviorRebateOrder.getRebateType())
+                        .rebateConfig(userBehaviorRebateOrder.getRebateConfig())
+                        .outBusinessNo(userBehaviorRebateOrder.getOutBusinessNo())
+                        .bizId(userBehaviorRebateOrder.getBizId())
+                        .build();
+                behaviorRebateOrderEntities.add(behaviorRebateOrderEntity);
+            }
+            return behaviorRebateOrderEntities;
+        } finally {
+            dbRouter.clear();
+        }
     }
 }

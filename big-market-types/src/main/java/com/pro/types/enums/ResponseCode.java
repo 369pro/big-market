@@ -16,6 +16,7 @@ public enum ResponseCode {
     RATE_LIMITER("0005", "访问限流拦截"),
     HYSTRIX("0006", "访问熔断拦截"),
     GATEWAY_ERROR("0007", "网关接口调用失败"),
+    APP_TOKEN_ERROR("0008", "接口权限拦截"),
     STRATEGY_RULE_WEIGHT_IS_NULL("ERR_BIZ_001", "业务异常，策略规则中 rule_weight 权重规则已适用但未配置"),
     UN_ASSEMBLED_STRATEGY_ARMORY("ERR_BIZ_002", "抽奖策略配置未装配，请通过IStrategyArmory完成装配"),
     ACTIVITY_STATE_ERROR("ERR_BIZ_003", "活动未开启（非open状态）"),

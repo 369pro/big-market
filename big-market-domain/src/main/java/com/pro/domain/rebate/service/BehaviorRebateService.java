@@ -30,7 +30,7 @@ public class BehaviorRebateService implements IBehaviorRebateService{
     public List<String> createOrder(BehaviorEntity behaviorEntity) {
         // 1. 查询返利配置
         List<DailyBehaviorRebateVO> dailyBehaviorRebates = behaviorRebateRepository.
-                queryDailyBehaviorRebateByBehaviorType(behaviorEntity.getBehaviorTypeVO().getCode());
+                queryDailyBehaviorRebateByBehaviorType(behaviorEntity.getBehaviorTypeVO().getCode().toLowerCase());
         if(null == dailyBehaviorRebates || dailyBehaviorRebates.isEmpty()){
             return new ArrayList<>();
         }

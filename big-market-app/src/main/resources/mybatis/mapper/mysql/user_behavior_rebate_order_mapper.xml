@@ -24,7 +24,7 @@
         )
     </insert>
 
-    <select id="queryOrderByOutBusinessNo" parameterType="com.pro.infrastructure.dao.po.UserBehaviorRebateOrder" resultMap="dataMap">
+    <select id="queryOrderByOutBusinessNo" resultMap="dataMap">
         select user_id, order_id, behavior_type, rebate_desc, rebate_type, rebate_config, out_business_no, biz_id
         from user_behavior_rebate_order
         where user_id = #{userId} and out_business_no = #{outBusinessNo}

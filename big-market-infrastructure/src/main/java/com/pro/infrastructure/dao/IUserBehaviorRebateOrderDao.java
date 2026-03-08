@@ -1,12 +1,14 @@
 package com.pro.infrastructure.dao;
 
 
-import cn.bugstack.middleware.db.router.annotation.DBRouterStrategy;
-import com.pro.domain.rebate.model.entity.BehaviorRebateOrderEntity;
-import com.pro.infrastructure.dao.po.UserBehaviorRebateOrder;
-import org.apache.ibatis.annotations.Mapper;
-
 import java.util.List;
+
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import com.pro.infrastructure.dao.po.UserBehaviorRebateOrder;
+
+import cn.bugstack.middleware.db.router.annotation.DBRouterStrategy;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥
@@ -19,5 +21,5 @@ public interface IUserBehaviorRebateOrderDao {
 
     void insert(UserBehaviorRebateOrder userBehaviorRebateOrder);
 
-    List<BehaviorRebateOrderEntity> queryOrderByOutBusinessNo(String userId, String outBusinessNo);
+    List<UserBehaviorRebateOrder> queryOrderByOutBusinessNo(@Param("userId") String userId, @Param("outBusinessNo") String outBusinessNo);
 }
