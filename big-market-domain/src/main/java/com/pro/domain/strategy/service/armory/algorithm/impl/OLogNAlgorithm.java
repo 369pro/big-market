@@ -15,6 +15,7 @@ import javax.annotation.Resource;
 
 import org.springframework.stereotype.Component;
 
+import com.pro.types.common.Constants;
 import com.pro.domain.strategy.model.entity.StrategyAwardEntity;
 import com.pro.domain.strategy.service.armory.algorithm.AbstractAlgorithm;
 
@@ -43,14 +44,17 @@ public class OLogNAlgorithm extends AbstractAlgorithm {
     @Override
     public void armoryAlgorithm(String key, List<StrategyAwardEntity> strategyAwardEntities, BigDecimal rateRange) {
         log.info("抽奖算法 OLog(n) 装配 key:{}", key);
-        // 构造区间指针
-        int from = 1, to = 0;
+        // 构造区间指针，使用 [from, to] 闭区间，起点从 0 开始，便于和 nextInt(range) 对齐
+        int from = 0, to = -1;
         // {{from,to},awardId}
         Map<Map<Integer,Integer>, Integer> table = new HashMap<>();
         for(StrategyAwardEntity strategyAwardEntity : strategyAwardEntities){
             Integer awardId = strategyAwardEntity.getAwardId();
             BigDecimal awardRate = strategyAwardEntity.getAwardRate();
             int intervalLen = rateRange.multiply(awardRate).intValue();
+            if (intervalLen <= 0) {
+                continue;
+            }
             to += intervalLen;
             // 注意：不能用 new HashMap<>(from, to)，那是容量构造器！必须先创建再put
             Map<Integer, Integer> rangeMap = new HashMap<>();
@@ -58,9 +62,14 @@ public class OLogNAlgorithm extends AbstractAlgorithm {
             table.put(rangeMap, awardId);
             from = to + 1;
         }
+
+        if (table.isEmpty()) {
+            throw new IllegalArgumentException("oLogNAlgorithm rate table is empty, key=" + key);
+        }
+
         //
         repository.storeStrategyAwardSearchRateTable(key,
-                table.size(), table);
+                to + 1, table);
     }
 
     // note: 这里redis那层封装了key前缀，你不用管这些东西
@@ -79,7 +88,7 @@ public class OLogNAlgorithm extends AbstractAlgorithm {
         }else if(table.size() <= 32){
             return binarySearch(rateKey, table);
         }else{
-            // 异步网络才用这个，这里复习 CompletableFuture
+            // note 异步网络才用这个，这里复习 CompletableFuture
             return multiThreadSearch(rateKey, table);
         }
     }
@@ -111,7 +120,7 @@ public class OLogNAlgorithm extends AbstractAlgorithm {
         // 这里是 entries 数组元素的下标，而不是区间下标
         int left = 0;
         int right = entries.size() - 1;
-        while(left < right){
+        while(left <= right){
             int mid = left + (right-left) / 2;
             Map.Entry<Map<String, Integer>, Integer> entry = entries.get(mid);
             Map<String, Integer> rangeMap = entry.getKey();

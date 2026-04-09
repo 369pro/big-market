@@ -33,10 +33,11 @@ public class RuleWeightLogicChain extends AbstractLogicChain {
      * 权重责任链过滤；
      * 1. 权重规则格式；4000:102,103,104,105 5000:102,103,104,105,106,107 6000:102,103,104,105,106,107,108,109
      * 2. 解析数据格式；判断哪个范围符合用户的特定抽奖范围
+     * 3. 用户分值从应用层传入，避免循环依赖
      */
     @Override
-    public DefaultChainFactory.StrategyAwardVO logic(String userId, Long strategyId){
-        log.info("抽奖责任链-权重开始 userId:{} strategyId:{} ruleModel:{}", userId, strategyId, ruleModel());
+    public DefaultChainFactory.StrategyAwardVO logic(String userId, Long strategyId, Integer userScore){
+        log.info("抽奖责任链-权重开始 userId:{} strategyId:{} userScore:{} ruleModel:{}", userId, strategyId, userScore, ruleModel());
 
         String ruleValue = repository.queryStrategyRuleValue(strategyId, ruleModel());
 
@@ -44,18 +45,19 @@ public class RuleWeightLogicChain extends AbstractLogicChain {
         Map<Integer, String> analyticalValueGroup = getAnalyticalValue(ruleValue);
         if (null == analyticalValueGroup || analyticalValueGroup.isEmpty()){
             log.warn("抽奖责任链-权重告警【策略配置权重，但ruleValue未配置相应值】 userId:{} strategyId:{} ruleModel:{}", userId, strategyId, ruleModel());
-            return next().logic(userId, strategyId);
+            return next().logic(userId, strategyId, userScore);
         }
-        // 2. 用户分值
-        Integer userScore = repository.queryActivityAccountTotalUseCount(userId, strategyId);
-
+        // 2. 用户分值（从应用层传入，避免循环依赖）
+        if (userScore == null) {
+            userScore = 0;
+        }
         // 3 获取权重对应的key
         String analyticalValue = analytical.getAnalyticalValue(analyticalValueGroup, userScore);
 
         // 4. 权重抽奖
         if (null != analyticalValue){
             Integer awardId = strategyDispatch.getRandomAwardId(strategyId, analyticalValue);
-            log.info("抽奖责任链-权重接管 userId:{} strategyId:{} ruleModel:{} awardId:{}", userId, strategyId, ruleModel(), awardId);
+            log.info("抽奖责任链-权重接管 userId:{} strategyId:{} userScore:{} ruleModel:{} awardId:{}", userId, strategyId, userScore, ruleModel(), awardId);
             return DefaultChainFactory.StrategyAwardVO.builder()
                     .awardId(awardId)
                     .logicModel(ruleModel())
@@ -63,8 +65,8 @@ public class RuleWeightLogicChain extends AbstractLogicChain {
         }
 
         // 5. 过滤其他责任链
-        log.info("抽奖责任链-权重放行 userId:{} strategyId:{} ruleModel:{}", userId, strategyId, ruleModel());
-        return next().logic(userId, strategyId);
+        log.info("抽奖责任链-权重放行 userId:{} strategyId:{} userScore:{} ruleModel:{}", userId, strategyId, userScore, ruleModel());
+        return next().logic(userId, strategyId, userScore);
     }
 
     @Override

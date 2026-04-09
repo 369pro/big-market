@@ -36,7 +36,7 @@ public class ActivitySkuStockActionChain extends AbstractActionChain {
         log.info("活动责任链-商品库存处理【有效期、状态、库存(sku)】开始。sku:{} activityId:{}",
                 activitySkuEntity.getSku(),
                 activityEntity.getActivityId());
-        // 扣减活动库存 raffle_activity_sku
+        // 扣减【活动库存】 raffle_activity_sku, note RDS扣减
         boolean ststus = activityDispatch.subtractionActivitySkuStock(activitySkuEntity.getSku(), activityEntity.getEndDateTime());
         if(!ststus){
             throw new AppException(ResponseCode.ACTIVITY_SKU_STOCK_ERROR.getCode(), ResponseCode.ACTIVITY_SKU_STOCK_ERROR.getInfo());

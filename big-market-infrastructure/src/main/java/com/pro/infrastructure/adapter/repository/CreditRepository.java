@@ -121,7 +121,7 @@ public class CreditRepository implements ICreditRepository {
         }
 
         try {
-            // 发送消息【在事务外执行，如果失败还有任务补偿】
+            // 发送消息【在事务外执行，如果失败还有任务补偿】note topic = 'credit_adjust_success' 消费者接收到了但是不会处理
             eventPublisher.publish(task.getTopic(), task.getMessage());
             // 更新数据库记录，task 任务表
             taskDao.updateTaskSendMessageCompleted(task);

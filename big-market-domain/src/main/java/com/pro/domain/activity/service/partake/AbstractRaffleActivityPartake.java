@@ -36,6 +36,10 @@ public abstract class AbstractRaffleActivityPartake implements IRaffleActivityPa
                 .build());
     }
 
+    /**
+     * @param partakeRaffleActivityEntity 参与抽奖活动实体对象
+     * @return 抽奖订单 实体
+     */
     @Override
     public UserRaffleOrderEntity createOrder(PartakeRaffleActivityEntity partakeRaffleActivityEntity) {
         // 0. 基础信息
@@ -64,7 +68,7 @@ public abstract class AbstractRaffleActivityPartake implements IRaffleActivityPa
             return userRaffleOrderEntity;
         }
 
-        // 3. 额度账户过滤&返回账户构建对象
+        // 3. 额度账户过滤&返回账户构建对象【创建日月账户额度】
         CreatePartakeOrderAggregate createPartakeOrderAggregate = this.doFilterAccount(userId, activityId, currentDate);
 
         // 4. 构建订单
@@ -73,7 +77,7 @@ public abstract class AbstractRaffleActivityPartake implements IRaffleActivityPa
         // 5. 填充抽奖单实体对象
         createPartakeOrderAggregate.setUserRaffleOrderEntity(userRaffleOrder);
 
-        // 6. 保存聚合对象 - 一个领域内的一个聚合是一个事务操作
+        // 6. 保存聚合对象 - 一个领域内的一个聚合是一个事务操作【更新日月账户额度】
         activityRepository.saveCreatePartakeOrderAggregate(createPartakeOrderAggregate);
         log.info("创建活动抽奖单完成 userId:{} activityId:{} orderId:{}", userId, activityId, userRaffleOrder.getOrderId());
         // 7. 返回订单信息

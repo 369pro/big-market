@@ -235,11 +235,23 @@ public class RaffleActivityController implements IRaffleActivityService {
             UserRaffleOrderEntity orderEntity = raffleActivityPartakeService.createOrder(request.getUserId(), request.getActivityId());
             log.info("活动抽奖，创建订单 userId:{} activityId:{} orderId:{}", request.getUserId(), request.getActivityId(), orderEntity.getOrderId());
 
+            // 3.5 查询用户积分（用于权重规则）
+            Integer userScore = 0;
+            try {
+                CreditAccountEntity creditAccount = creditAdjustService.queryUserCreditAccount(request.getUserId());
+                if (creditAccount != null && creditAccount.getAdjustAmount() != null) {
+                    userScore = creditAccount.getAdjustAmount().intValue();
+                }
+            } catch (Exception e) {
+                log.warn("查询用户积分失败，使用默认值0 userId:{}", request.getUserId(), e);
+            }
+
             // 4. 抽奖策略 - 执行抽奖
             RaffleAwardEntity raffleAwardEntity = raffleStrategy.performRaffle(RaffleFactorEntity.builder()
                     .userId(orderEntity.getUserId())
                     .strategyId(orderEntity.getStrategyId())
                     .endDateTime(orderEntity.getEndDateTime())
+                    .userScore(userScore)
                     .build());
 
             // 5. 存放结果 - 写入中奖记录

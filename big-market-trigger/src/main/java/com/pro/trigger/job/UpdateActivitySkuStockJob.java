@@ -51,6 +51,7 @@ public class UpdateActivitySkuStockJob {
                 executor.execute(()->{
                     ActivitySkuStockKeyVO activitySkuStockKeyVO = null;
                     try {
+                        // note 取出队列进行消费
                         activitySkuStockKeyVO = skuStock.takeQueueValue(sku);
                     } catch (InterruptedException e) {
                         log.error("定时任务，更新活动sku库存失败 sku: {}", sku);

@@ -24,5 +24,7 @@ public class RaffleFactorEntity {
     private Long strategyId;
     /** 结束时间 */
     private Date endDateTime;
+    /** 用户积分（用于权重规则判断） */
+    private Integer userScore;
 
 }
