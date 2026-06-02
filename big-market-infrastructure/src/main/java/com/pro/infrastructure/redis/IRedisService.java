@@ -2,6 +2,8 @@ package com.pro.infrastructure.redis;
 
 import org.redisson.api.*;
 
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -266,5 +268,27 @@ public interface IRedisService {
     Boolean setNx(String key);
 
     Boolean setNx(String key, long expired, TimeUnit timeUnit);
+
+    /**
+     * 执行库存扣减 Lua 脚本（原子: decr + setNx + 回滚 + SADD）
+     *
+     * @param stockKey     库存缓存 key
+     * @param trackSetKey  追踪 Set key
+     * @param expireMs     锁过期毫秒, 0=永不过期
+     * @param setMember    Set 成员
+     * @param lockKeyPrefix 锁 key 前缀
+     * @return [status, surplus]  status: 1=成功, 0=锁冲突(已回滚), -1=库存不足
+     */
+    List<Long> execStockDeduction(String stockKey, String trackSetKey,
+                                  long expireMs, String setMember, String lockKeyPrefix);
+
+    /**
+     * SPOP 原子弹出 Set 中指定数量成员, 用于批量消费追踪 Set
+     *
+     * @param key   Set key
+     * @param count 弹出数量上限
+     * @return 弹出的成员集合
+     */
+    Set<String> popFromSet(String key, long count);
 
 }

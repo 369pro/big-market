@@ -271,32 +271,39 @@ public class StrategyRepository implements IStrategyRepository {
         return subtractionAwardStock(cacheKey, null);
     }
     /**
-     * 扣减库存并加锁操作，decr和0对比，如果是incr操作就和总量对比，和总量对比可以动态添加库存
-     * @param cacheKey    缓存Key
+     * 扣减库存（Lua 原子脚本: decr + 滑块锁 + 追踪 Set SADD）
+     * <p>相比旧实现的改进：
+     * <ul>
+     *   <li>decr + setNx 合并为一次原子执行，消除并发窗口</li>
+     *   <li>setNx 失败时自动 INCR 回滚 decr，库存不丢失</li>
+     *   <li>同时 SADD 入追踪 Set，供定时任务 SPOP 批量回写 DB</li>
+     * </ul>
+     *
+     * @param cacheKey    缓存Key (格式: strategy_award_count_key_{sid}_{aid})
      * @param endDateTime 活动结束时间
      */
     @Override
     public Boolean subtractionAwardStock(String cacheKey, Date endDateTime) {
-        long surplus = redisService.decr(cacheKey);
-        if (surplus < 0) {
-            // 库存小于0，恢复为0个
-            redisService.setValue(cacheKey, 0);
-            return false;
-        }
-        // 1. 按照cacheKey decr 后的值，如 99、98、97 和 key 组成为库存锁的key进行使用。
-        // 2. 加锁为了兜底，如果后续有恢复库存，手动处理等，也不会超卖。因为所有的可用库存key，都被加锁了。
-        String lockKey = cacheKey + Constants.UNDERLINE + surplus;
-        Boolean lock = false;
+        // 1. 计算锁过期时间
+        long expireMs = 0;
         if (null != endDateTime) {
-            long expireMillis = endDateTime.getTime() - System.currentTimeMillis() + TimeUnit.DAYS.toMillis(1);
-            lock = redisService.setNx(lockKey, expireMillis, TimeUnit.MILLISECONDS);
-        } else {
-            lock = redisService.setNx(lockKey);
+            expireMs = endDateTime.getTime() - System.currentTimeMillis() + TimeUnit.DAYS.toMillis(1);
         }
-        if (!lock) {
-            log.info("策略奖品库存加锁失败 {}", lockKey);
+        // 2. 从 cacheKey 提取 setMember: "strategy_award_count_key_100001_101" → "100001:101"
+        String suffix = cacheKey.substring(Constants.RedisKey.STRATEGY_AWARD_COUNT_KEY.length());
+        String setMember = suffix.replace(Constants.UNDERLINE, Constants.COLON);
+        // 3. 执行 Lua 脚本 (decr + setNx + 回滚 + SADD 全部原子)
+        List<Long> result = redisService.execStockDeduction(
+                cacheKey,
+                Constants.RedisKey.STRATEGY_AWARD_TRACK_SET,
+                expireMs,
+                setMember,
+                cacheKey);
+        int status = result.get(0).intValue();
+        if (status != 1) {
+            log.warn("策略奖品库存扣减失败 status={} cacheKey={}", status, cacheKey);
         }
-        return lock;
+        return status == 1;
     }
 
     @Override

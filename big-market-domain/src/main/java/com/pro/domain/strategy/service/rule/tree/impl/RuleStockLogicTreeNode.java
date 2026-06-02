@@ -1,8 +1,6 @@
 package com.pro.domain.strategy.service.rule.tree.impl;
 
 import com.pro.domain.strategy.model.valobj.RuleLogicCheckTypeVO;
-import com.pro.domain.strategy.model.valobj.StrategyAwardStockKeyVO;
-import com.pro.domain.strategy.repository.IStrategyRepository;
 import com.pro.domain.strategy.service.armory.IStrategyDispatch;
 import com.pro.domain.strategy.service.rule.tree.ILogicTreeNode;
 import com.pro.domain.strategy.service.rule.tree.factory.DefaultTreeFactory;
@@ -22,23 +20,16 @@ import java.util.Date;
 public class RuleStockLogicTreeNode implements ILogicTreeNode {
     @Resource
     private IStrategyDispatch strategyDispatch;
-    @Resource
-    private IStrategyRepository strategyRepository;
 
     @Override
     public DefaultTreeFactory.TreeActionEntity logic(String userId, Long strategyId,
                                                      Integer awardId, String ruleValue, Date endDateTime) {
         log.info("规则过滤-库存扣减 userId:{} strategyId:{} awardId:{}", userId, strategyId, awardId);
         Boolean status = strategyDispatch.subtractionAwardStock(strategyId, awardId, endDateTime);
-        // true；库存扣减成功，由TAKE_OVER规则节点接管，返回奖品ID，奖品规则配置
+        // true；库存扣减成功（Lua 脚本已原子完成 decr + 锁 + SADD 追踪 Set），由TAKE_OVER规则节点接管
         if(status){
             log.info("规则过滤-库存扣减-成功 userId:{} strategyId:{} awardId:{}, ruleValue:{}",
                     userId, strategyId, awardId, ruleValue);
-            strategyRepository.awardStockConsumeSendQueue(StrategyAwardStockKeyVO.builder()
-                    .awardId(awardId)
-                    .strategyId(strategyId)
-                    .build());
-            // 注意；根据数据库表中配置走不同的节点。目前数据库配置 ALLOW 是走到下一个节点。
             return DefaultTreeFactory.TreeActionEntity.builder()
                     .ruleLogicCheckType(RuleLogicCheckTypeVO.TAKE_OVER)
                     .strategyAwardVO(DefaultTreeFactory.StrategyAwardVO.builder()

@@ -43,10 +43,10 @@ public class ActivitySkuStockActionChain extends AbstractActionChain {
         }
         log.info("活动责任链-商品库存扣减处理【有效期、状态、库存(sku)】成功。sku:{} activityId:{}", activitySkuEntity.getSku(),
                 activityEntity.getActivityId());
+        // 发送库存延迟消息，由定时任务 drainTo 聚合后批量 UPDATE DB
         ActivitySkuStockKeyVO activitySkuStockKeyVO = ActivitySkuStockKeyVO.builder()
                 .activityId(activityEntity.getActivityId())
                 .sku(activitySkuEntity.getSku()).build();
-        // 扣减库存，发送库存延迟消息，由定时任务处理DB扣减
         activityRepository.activitySkuStockConsumeSendQueue(activitySkuStockKeyVO);
         return true;
     }

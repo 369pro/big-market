@@ -368,19 +368,18 @@ public class ActivityRepository implements IActivityRepository {
     @Override
     public boolean subtractionActivitySkuStock(Long sku, String cacheKey, Date endDateTime) {
         long surplus = redisService.decr(cacheKey);
-        if (surplus == 0) {
-            // 库存消耗没了以后，发送MQ消息，更新数据库库存
-            eventPublisher.publish(activitySkuStockZeroMessageEvent.topic(), activitySkuStockZeroMessageEvent.buildEventMessage(sku));
-            return false;
-        } else if (surplus < 0) {
+        if (surplus < 0) {
             // 库存小于0，恢复为0个
             redisService.setAtomicLong(cacheKey, 0);
             return false;
         }
-
-        // 1. 按照cacheKey decr 后的值，如 99、98、97 和 key 组成为库存锁的key进行使用。
-        // 2. 加锁为了兜底，如果后续有恢复库存，手动处理等【运营是人来操作，会有这种情况发放，系统要做防护】，也不会超卖。因为所有的可用库存key，都被加锁了。
-        // 3. 设置加锁时间为活动到期 + 延迟1天
+        // surplus >= 0 时扣减成功；surplus == 0 表示最后一个库存刚刚被正常消耗
+        if (surplus == 0) {
+            // 库存刚好耗尽，发送MQ消息通知清空DB
+            eventPublisher.publish(activitySkuStockZeroMessageEvent.topic(),
+                    activitySkuStockZeroMessageEvent.buildEventMessage(sku));
+        }
+        // 加锁防超卖
         String lockKey = cacheKey + Constants.UNDERLINE + surplus;
         long expireMillis = endDateTime.getTime() - System.currentTimeMillis() + TimeUnit.DAYS.toMillis(1);
         Boolean lock = redisService.setNx(lockKey, expireMillis, TimeUnit.MILLISECONDS);

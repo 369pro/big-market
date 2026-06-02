@@ -1,22 +1,34 @@
 package com.pro.infrastructure.redis;
 
+import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.*;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * Redis 服务 - Redisson
  *
  * @author Fuzhengwei bugstack.cn @小傅哥
  */
+@Slf4j
 @Service("redissonService")
 public class RedissonService implements IRedisService {
 
     @Resource
     private RedissonClient redissonClient;
+
+    /** Lua 脚本 SHA（启动时预加载） */
+    private String stockDeductionSha;
 
     public <T> void setValue(String key, T value) {
         redissonClient.<T>getBucket(key).set(value);
@@ -176,5 +188,77 @@ public class RedissonService implements IRedisService {
     @Override
     public Boolean setNx(String key, long expired, TimeUnit timeUnit) {
         return redissonClient.getBucket(key).trySet("lock", expired, timeUnit);
+    }
+
+    // ==================== Lua 脚本 + Set 批量回写 ====================
+
+    @PostConstruct
+    public void loadStockDeductionScript() {
+        try {
+            ClassPathResource resource = new ClassPathResource("lua/stock_deduction.lua");
+            String script;
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
+                script = reader.lines().collect(Collectors.joining("\n"));
+            }
+            stockDeductionSha = redissonClient.getScript().scriptLoad(script);
+            log.info("库存扣减 Lua 脚本加载成功 sha={}", stockDeductionSha);
+        } catch (Exception e) {
+            log.error("库存扣减 Lua 脚本加载失败，将回退到 eval 模式", e);
+        }
+    }
+
+    @Override
+    public List<Long> execStockDeduction(String stockKey, String trackSetKey,
+                                          long expireMs, String setMember, String lockKeyPrefix) {
+        RScript script = redissonClient.getScript();
+        List<Object> args = Arrays.asList(expireMs, setMember, lockKeyPrefix);
+        List<Object> keys = Arrays.asList(stockKey, trackSetKey);
+        try {
+            // 优先使用 EVALSHA（预加载过）
+            if (stockDeductionSha != null) {
+                return toLongList(script.evalSha(RScript.Mode.READ_WRITE,
+                        stockDeductionSha, RScript.ReturnType.MULTI, keys, args.toArray()));
+            }
+        } catch (Exception e) {
+            log.warn("EVALSHA 执行失败，回退到 EVAL stockKey={}", stockKey, e);
+        }
+        // 回退到 eval 模式（脚本未预加载或 SHA 过期）
+        String rawScript = "-- fallback: loaded from classpath\n" +
+                "local surplus = redis.call('DECR', KEYS[1])\n" +
+                "if surplus < 0 then redis.call('SET', KEYS[1], 0); return {-1, 0}; end\n" +
+                "local lockKey = ARGV[3] .. '_' .. surplus\n" +
+                "local lockOk; if ARGV[1] == '0' then lockOk = redis.call('SET', lockKey, '1', 'NX') " +
+                "else lockOk = redis.call('SET', lockKey, '1', 'PX', ARGV[1], 'NX') end\n" +
+                "if not lockOk then redis.call('INCR', KEYS[1]); return {0, surplus}; end\n" +
+                "redis.call('SADD', KEYS[2], ARGV[2]); return {1, surplus}";
+        return toLongList(script.eval(RScript.Mode.READ_WRITE,
+                rawScript, RScript.ReturnType.MULTI, keys, args.toArray()));
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public Set<String> popFromSet(String key, long count) {
+        // Redisson RSet 不支持 SPOP count，用 Lua 封装
+        RScript script = redissonClient.getScript();
+        List<Object> result = script.eval(RScript.Mode.READ_WRITE,
+                "return redis.call('SPOP', KEYS[1], ARGV[1])",
+                RScript.ReturnType.MULTI,
+                Collections.singletonList(key), count);
+        if (result == null || result.isEmpty()) {
+            return Collections.emptySet();
+        }
+        return result.stream()
+                .filter(Objects::nonNull)
+                .map(Object::toString)
+                .collect(Collectors.toSet());
+    }
+
+    /** Redisson Lua 返回的 List<Object> 转 List<Long> */
+    private List<Long> toLongList(List<Object> raw) {
+        if (raw == null) return Collections.emptyList();
+        return raw.stream()
+                .map(o -> ((Number) o).longValue())
+                .collect(Collectors.toList());
     }
 }
