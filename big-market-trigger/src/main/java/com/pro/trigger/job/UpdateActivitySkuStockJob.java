@@ -1,6 +1,5 @@
 package com.pro.trigger.job;
 
-import com.pro.domain.activity.model.valobj.ActivitySkuStockKeyVO;
 import com.pro.domain.activity.service.IRaffleActivitySkuStockService;
 import com.pro.infrastructure.dao.IRaffleActivitySkuDao;
 import com.xxl.job.core.handler.annotation.XxlJob;
@@ -27,7 +26,6 @@ public class UpdateActivitySkuStockJob {
     private IRaffleActivitySkuStockService skuStock;
     @Resource
     private IRaffleActivitySkuDao raffleActivitySkuDao;
-    // todo 这里的线程池没看懂
     @Resource
     private ThreadPoolExecutor executor;
     @Resource
@@ -49,19 +47,15 @@ public class UpdateActivitySkuStockJob {
             List<Long> skuList = raffleActivitySkuDao.querySkuList();
             for(Long sku : skuList){
                 executor.execute(()->{
-                    ActivitySkuStockKeyVO activitySkuStockKeyVO = null;
                     try {
-                        // note 取出队列进行消费
-                        activitySkuStockKeyVO = skuStock.takeQueueValue(sku);
-                    } catch (InterruptedException e) {
-                        log.error("定时任务，更新活动sku库存失败 sku: {}", sku);
+                        // drainTo 排空队列，聚合扣减数量，一次 UPDATE -count 替代多次 UPDATE -1
+                        int count = skuStock.takeQueueValues(sku);
+                        if (count <= 0) return;
+                        log.info("UpdateActivitySkuStockJob，批量更新活动sku库存 sku:{} count:{}", sku, count);
+                        skuStock.updateActivitySkuStock(sku, count);
+                    } catch (Exception e) {
+                        log.error("定时任务，批量更新活动sku库存失败 sku: {}", sku, e);
                     }
-                    if (null == activitySkuStockKeyVO) {
-                        return;
-                    }
-                    log.info("UpdateActivitySkuStockJob，更新活动sku库存 sku:{} activityId:{}",
-                            activitySkuStockKeyVO.getSku(), activitySkuStockKeyVO.getActivityId());
-                    skuStock.updateActivitySkuStock(activitySkuStockKeyVO.getSku());
                 });
             }
         }catch (Exception e) {

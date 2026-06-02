@@ -70,8 +70,18 @@ public class DefaultRaffleStrategy extends AbstractRaffleStrategy implements IRa
     }
 
     @Override
+    public int takeQueueValueCount(Long strategyId, Integer awardId) {
+        return repository.takeQueueValueCount(strategyId, awardId);
+    }
+
+    @Override
     public void updateStrategyAwardStock(Long strategyId, Integer awardId) {
         repository.updateStrategyAwardStock(strategyId, awardId);
+    }
+
+    @Override
+    public void updateStrategyAwardStock(Long strategyId, Integer awardId, int count) {
+        repository.updateStrategyAwardStock(strategyId, awardId, count);
     }
 
     @Override

@@ -406,6 +406,15 @@ public class ActivityRepository implements IActivityRepository {
     }
 
     @Override
+    public int takeQueueValues(Long sku) {
+        String cacheKey = Constants.RedisKey.ACTIVITY_SKU_COUNT_QUERY_KEY + sku;
+        RBlockingQueue<ActivitySkuStockKeyVO> destinationQueue = redisService.getBlockingQueue(cacheKey);
+        List<ActivitySkuStockKeyVO> list = new ArrayList<>();
+        destinationQueue.drainTo(list);
+        return list.size();
+    }
+
+    @Override
     public void clearQueueValue(Long sku) {
         String cacheKey = Constants.RedisKey.ACTIVITY_SKU_COUNT_QUERY_KEY + sku;
         RBlockingQueue<ActivitySkuStockKeyVO> destinationQueue = redisService.getBlockingQueue(cacheKey);
@@ -415,6 +424,11 @@ public class ActivityRepository implements IActivityRepository {
     @Override
     public void updateActivitySkuStock(Long sku) {
         raffleActivitySkuDao.updateActivitySkuStock(sku);
+    }
+
+    @Override
+    public void updateActivitySkuStock(Long sku, int count) {
+        raffleActivitySkuDao.updateActivitySkuStockBatch(sku, count);
     }
 
     @Override

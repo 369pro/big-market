@@ -164,7 +164,7 @@ public class AwardRepository implements IAwardRepository {
 //                        userCreditAccountDao.insert(userCreditAccountReq);
 //                    }
 
-                    // 更新奖品记录
+                    // note 更新奖品记录幂等性处理
                     int updateAwardCount = userAwardRecordDao.updateAwardRecordCompletedState(userAwardRecordReq);
                     if (0 == updateAwardCount) {
                         log.warn("更新中奖记录，重复更新拦截 userId:{} giveOutPrizesAggregate:{}", userId, JSON.toJSONString(giveOutPrizesAggregate));

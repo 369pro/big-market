@@ -34,9 +34,19 @@ public interface IActivityRepository {
 
     ActivitySkuStockKeyVO takeQueueValue(Long sku);
 
+    /**
+     * 排空队列中该SKU的所有消息，返回聚合后的总扣减数量
+     */
+    int takeQueueValues(Long sku);
+
     void clearQueueValue(Long sku);
 
     void updateActivitySkuStock(Long sku);
+
+    /**
+     * 批量更新活动sku库存（聚合扣减）
+     */
+    void updateActivitySkuStock(Long sku, int count);
 
     void clearActivitySkuStock(Long sku);
 

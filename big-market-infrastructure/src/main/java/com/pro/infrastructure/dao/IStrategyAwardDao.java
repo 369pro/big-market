@@ -2,6 +2,7 @@ package com.pro.infrastructure.dao;
 
 import com.pro.infrastructure.dao.po.StrategyAward;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -20,6 +21,11 @@ public interface IStrategyAwardDao {
     String queryStrategyAwardRuleModels(StrategyAward strategyAward);
 
     void updateStrategyAwardStock(StrategyAward strategyAward);
+
+    /**
+     * 批量更新奖品库存（聚合扣减）
+     */
+    void updateStrategyAwardStockBatch(@Param("strategyId") Long strategyId, @Param("awardId") Integer awardId, @Param("count") int count);
 
     StrategyAward queryStrategyAward(StrategyAward strategyAwardReq);
 

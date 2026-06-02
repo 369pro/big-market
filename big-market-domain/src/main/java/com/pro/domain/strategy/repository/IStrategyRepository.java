@@ -67,6 +67,12 @@ public interface IStrategyRepository {
     StrategyAwardStockKeyVO takeQueueValue() throws InterruptedException;
 
     StrategyAwardStockKeyVO takeQueueValue(Long strategyId, Integer awardId) throws InterruptedException;
+
+    /**
+     * 排空队列中该奖品的所有消息，返回聚合后的总扣减数量
+     */
+    int takeQueueValueCount(Long strategyId, Integer awardId);
+
     /**
      * 更新奖品库存消耗
      *
@@ -74,6 +80,15 @@ public interface IStrategyRepository {
      * @param awardId 奖品ID
      */
     void updateStrategyAwardStock(Long strategyId, Integer awardId);
+
+    /**
+     * 批量更新奖品库存消耗（聚合扣减）
+     *
+     * @param strategyId 策略ID
+     * @param awardId    奖品ID
+     * @param count      扣减数量
+     */
+    void updateStrategyAwardStock(Long strategyId, Integer awardId, int count);
 
     /**
      * 根据策略ID+奖品ID的唯一值组合，查询奖品信息

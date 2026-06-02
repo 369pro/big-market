@@ -30,8 +30,9 @@ public class RuleWeightLogicChain extends AbstractLogicChain {
     // 按需选择需要的计算策略，旧版是 AnalyticalNotEqual 算法，新增加 = 算法。使用时可以实例化 AnalyticalEqual 即可。这个操作也可以从数据库中配置处理。
     private final IAnalytical analytical = new AnalyticalEqual();
     /**
-     * 权重责任链过滤；
+     * note 权重责任链过滤；不用模仿掘金的幸运值了，积分超过一定数量就不会再抽到积分
      * 1. 权重规则格式；4000:102,103,104,105 5000:102,103,104,105,106,107 6000:102,103,104,105,106,107,108,109
+     * 1. 权重规则格式；1:107 2:107,108 3:107,108,109
      * 2. 解析数据格式；判断哪个范围符合用户的特定抽奖范围
      * 3. 用户分值从应用层传入，避免循环依赖
      */

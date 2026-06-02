@@ -21,6 +21,11 @@ public interface IRaffleActivitySkuStockService {
     ActivitySkuStockKeyVO takeQueueValue(Long sku) throws InterruptedException;
 
     /**
+     * 排空队列中该SKU的所有消息，返回聚合后的总扣减数量
+     */
+    int takeQueueValues(Long sku);
+
+    /**
      * 清空队列
      */
     void clearQueueValue(Long sku);
@@ -31,6 +36,14 @@ public interface IRaffleActivitySkuStockService {
      * @param sku 活动商品
      */
     void updateActivitySkuStock(Long sku);
+
+    /**
+     * 批量更新活动sku库存（聚合扣减）
+     *
+     * @param sku   活动商品
+     * @param count 扣减数量
+     */
+    void updateActivitySkuStock(Long sku, int count);
 
     /**
      * 缓存库存以消耗完毕，清空数据库库存

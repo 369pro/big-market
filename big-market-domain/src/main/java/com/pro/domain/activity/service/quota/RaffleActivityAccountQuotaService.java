@@ -44,7 +44,7 @@ public class RaffleActivityAccountQuotaService extends AbstractRaffleActivityAcc
         activityOrderEntity.setTotalCount(activityCountEntity.getTotalCount());
         activityOrderEntity.setDayCount(activityCountEntity.getDayCount());
         activityOrderEntity.setMonthCount(activityCountEntity.getMonthCount());
-//        activityOrderEntity.setState(OrderStateVO.completed);
+        activityOrderEntity.setState(OrderStateVO.completed);
         activityOrderEntity.setPayAmount(activitySkuEntity.getProductAmount());
         activityOrderEntity.setOutBusinessNo(skuRechargeEntity.getOutBusinessNo());
 
@@ -70,6 +70,11 @@ public class RaffleActivityAccountQuotaService extends AbstractRaffleActivityAcc
     }
 
     @Override
+    public int takeQueueValues(Long sku) {
+        return activityRepository.takeQueueValues(sku);
+    }
+
+    @Override
     public void clearQueueValue(Long sku) {
         activityRepository.clearQueueValue(sku);
     }
@@ -77,6 +82,11 @@ public class RaffleActivityAccountQuotaService extends AbstractRaffleActivityAcc
     @Override
     public void updateActivitySkuStock(Long sku) {
         activityRepository.updateActivitySkuStock(sku);
+    }
+
+    @Override
+    public void updateActivitySkuStock(Long sku, int count) {
+        activityRepository.updateActivitySkuStock(sku, count);
     }
 
     @Override

@@ -21,19 +21,11 @@ public class DefaultChainFactory {
     protected IStrategyRepository repository;
     // 存放策略链，策略ID -> 责任链
     private final Map<Long, ILogicChain> strategyChainGroup;
-
     public DefaultChainFactory(ApplicationContext applicationContext, IStrategyRepository repository){
         this.applicationContext = applicationContext;
         this.repository = repository;
         this.strategyChainGroup = new ConcurrentHashMap<>();
     }
-
-    /**
-     * 通过策略ID，构建责任链
-     *
-     * @param strategyId 策略ID
-     * @return LogicChain
-     */
     public ILogicChain openLogicChain(Long strategyId){
         ILogicChain cacheLogicChain = strategyChainGroup.get(strategyId);
         if(null != cacheLogicChain){

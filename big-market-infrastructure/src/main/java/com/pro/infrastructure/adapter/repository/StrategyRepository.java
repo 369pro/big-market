@@ -301,12 +301,12 @@ public class StrategyRepository implements IStrategyRepository {
 
     @Override
     public void awardStockConsumeSendQueue(StrategyAwardStockKeyVO strategyAwardStockKeyVO) {
-        String cacheKey = Constants.RedisKey.STRATEGY_AWARD_COUNT_QUERY_KEY;
-        // 第一步：获取普通阻塞队列（目的地）
+        // 按 per-award key 写入队列，与消费者 takeQueueValue(sid, aid) 对齐
+        String cacheKey = Constants.RedisKey.STRATEGY_AWARD_COUNT_QUERY_KEY
+                + Constants.UNDERLINE + strategyAwardStockKeyVO.getStrategyId()
+                + Constants.UNDERLINE + strategyAwardStockKeyVO.getAwardId();
         RBlockingQueue<StrategyAwardStockKeyVO> blockingQueue = redisService.getBlockingQueue(cacheKey);
-        // 第二步：基于阻塞队列创建延迟队列（中转站）
         RDelayedQueue<StrategyAwardStockKeyVO> delayedQueue = redisService.getDelayedQueue(blockingQueue);
-        // 第三步：将消息放入延迟队列，3秒后自动转入阻塞队列
         delayedQueue.offer(strategyAwardStockKeyVO, 3, TimeUnit.SECONDS);
     }
 
@@ -325,11 +325,25 @@ public class StrategyRepository implements IStrategyRepository {
     }
 
     @Override
+    public int takeQueueValueCount(Long strategyId, Integer awardId) {
+        String cacheKey = Constants.RedisKey.STRATEGY_AWARD_COUNT_QUERY_KEY + Constants.UNDERLINE + strategyId + Constants.UNDERLINE + awardId;
+        RBlockingQueue<StrategyAwardStockKeyVO> destinationQueue = redisService.getBlockingQueue(cacheKey);
+        List<StrategyAwardStockKeyVO> list = new ArrayList<>();
+        destinationQueue.drainTo(list);
+        return list.size();
+    }
+
+    @Override
     public void updateStrategyAwardStock(Long strategyId, Integer awardId) {
         StrategyAward strategyAward = new StrategyAward();
         strategyAward.setStrategyId(strategyId);
         strategyAward.setAwardId(awardId);
         strategyAwardDao.updateStrategyAwardStock(strategyAward);
+    }
+
+    @Override
+    public void updateStrategyAwardStock(Long strategyId, Integer awardId, int count) {
+        strategyAwardDao.updateStrategyAwardStockBatch(strategyId, awardId, count);
     }
 
     @Override

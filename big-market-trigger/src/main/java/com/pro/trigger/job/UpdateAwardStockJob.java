@@ -45,15 +45,17 @@ public class UpdateAwardStockJob {
             for (StrategyAwardStockKeyVO strategyAwardStockKeyVO : strategyAwardStockKeyVOS) {
                 executor.execute(() -> {
                     try {
-                        StrategyAwardStockKeyVO queueStrategyAwardStockKeyVO = raffleStock.takeQueueValue(
+                        // drainTo 排空队列，聚合扣减数量，一次 UPDATE -count 替代多次 UPDATE -1
+                        int count = raffleStock.takeQueueValueCount(
                                 strategyAwardStockKeyVO.getStrategyId(), strategyAwardStockKeyVO.getAwardId());
-                        if (null == queueStrategyAwardStockKeyVO) return;
-                        log.info("定时任务，更新奖品消耗库存 strategyId:{} awardId:{}",
-                                queueStrategyAwardStockKeyVO.getStrategyId(), queueStrategyAwardStockKeyVO.getAwardId());
-                        raffleStock.updateStrategyAwardStock(queueStrategyAwardStockKeyVO.getStrategyId(), queueStrategyAwardStockKeyVO.getAwardId());
-                    } catch (InterruptedException e) {
-                        log.error("定时任务，更新奖品消耗库存失败 strategyId:{} awardId:{}",
-                                strategyAwardStockKeyVO.getStrategyId(), strategyAwardStockKeyVO.getAwardId());
+                        if (count <= 0) return;
+                        log.info("定时任务，批量更新奖品消耗库存 strategyId:{} awardId:{} count:{}",
+                                strategyAwardStockKeyVO.getStrategyId(), strategyAwardStockKeyVO.getAwardId(), count);
+                        raffleStock.updateStrategyAwardStock(
+                                strategyAwardStockKeyVO.getStrategyId(), strategyAwardStockKeyVO.getAwardId(), count);
+                    } catch (Exception e) {
+                        log.error("定时任务，批量更新奖品消耗库存失败 strategyId:{} awardId:{}",
+                                strategyAwardStockKeyVO.getStrategyId(), strategyAwardStockKeyVO.getAwardId(), e);
                     }
                 });
             }
