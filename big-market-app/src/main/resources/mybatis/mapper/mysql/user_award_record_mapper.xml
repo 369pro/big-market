@@ -24,6 +24,13 @@
         )
     </insert>
 
+    <select id="queryByUserIdAndOrderId" parameterType="com.pro.infrastructure.dao.po.UserAwardRecord" resultMap="dataMap">
+        select user_id, activity_id, strategy_id, order_id, award_id, award_title, award_time, award_state
+        from user_award_record
+        where user_id = #{userId} and order_id = #{orderId}
+        limit 1
+    </select>
+
     <update id="updateAwardRecordCompletedState" parameterType="com.pro.infrastructure.dao.po.UserAwardRecord">
         update user_award_record set award_state = 'completed'
         where user_id = #{userId} and order_id = #{orderId} and award_state = 'create'

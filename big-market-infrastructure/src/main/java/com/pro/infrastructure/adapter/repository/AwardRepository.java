@@ -26,11 +26,12 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.annotation.Resource;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Repository
 public class AwardRepository implements IAwardRepository {
+    private static final String PERSISTED_COMPLETED_AWARD_STATE = "completed";
+
     @Resource
     private IRedisService redisService;
     @Resource
@@ -138,6 +139,7 @@ public class AwardRepository implements IAwardRepository {
         UserAwardRecord userAwardRecordReq = new UserAwardRecord();
         userAwardRecordReq.setUserId(userId);
         userAwardRecordReq.setOrderId(userAwardRecordEntity.getOrderId());
+        userAwardRecordReq.setAwardId(userAwardRecordEntity.getAwardId());
         userAwardRecordReq.setAwardState(userAwardRecordEntity.getAwardState().getCode());
 
         // 更新用户积分 「首次则插入数据」
@@ -148,33 +150,46 @@ public class AwardRepository implements IAwardRepository {
         userCreditAccountReq.setAccountStatus(AccountStatusVO.open.getCode());
         RLock lock = redisService.getLock(Constants.RedisKey.ACTIVITY_ACCOUNT_LOCK + userId);
         try {
-            lock.lock(3, TimeUnit.SECONDS);
+            lock.lock();
             dbRouter.doRouter(giveOutPrizesAggregate.getUserId());
             transactionTemplate.execute(status -> {
                 try {
+                    // 先以中奖记录的条件更新抢占本次发奖。重复消息不会再触碰积分账户。
+                    int updateAwardCount = userAwardRecordDao.updateAwardRecordCompletedState(userAwardRecordReq);
+                    if (0 == updateAwardCount) {
+                        UserAwardRecord persistedAwardRecord = userAwardRecordDao.queryByUserIdAndOrderId(userAwardRecordReq);
+                        if (isCompletedAwardRecord(persistedAwardRecord, userAwardRecordReq)) {
+                            log.warn("更新中奖记录，重复更新拦截 userId:{} giveOutPrizesAggregate:{}", userId, JSON.toJSONString(giveOutPrizesAggregate));
+                            status.setRollbackOnly();
+                            return 0;
+                        }
+
+                        status.setRollbackOnly();
+                        throw new IllegalStateException("Award record was not found or does not match the award message");
+                    }
+                    if (1 != updateAwardCount) {
+                        status.setRollbackOnly();
+                        throw new IllegalStateException("Unexpected award record update count: " + updateAwardCount);
+                    }
+
                     UserCreditAccount userCreditAccount = userCreditAccountDao.queryUserCreditAccount(userCreditAccountReq);
                     // 更新积分 || 创建积分账户
                     if(userCreditAccount == null){
                         userCreditAccountDao.insert(userCreditAccountReq);
                     }else{
-                        userCreditAccountDao.updateAddAmount(userCreditAccountReq);
+                        int updateAccountCount = userCreditAccountDao.updateAddAmount(userCreditAccountReq);
+                        if (updateAccountCount != 1) {
+                            status.setRollbackOnly();
+                            throw new AppException(ResponseCode.USER_CREDIT_ACCOUNT_NO_AVAILABLE_AMOUNT.getCode(),
+                                    "用户积分账户不可用或额度不足");
+                        }
                     }
-//                    int updateAccountCount = userCreditAccountDao.updateAddAmount(userCreditAccountReq);
-//                    if (0 == updateAccountCount) {
-//                        userCreditAccountDao.insert(userCreditAccountReq);
-//                    }
 
-                    // note 更新奖品记录幂等性处理
-                    int updateAwardCount = userAwardRecordDao.updateAwardRecordCompletedState(userAwardRecordReq);
-                    if (0 == updateAwardCount) {
-                        log.warn("更新中奖记录，重复更新拦截 userId:{} giveOutPrizesAggregate:{}", userId, JSON.toJSONString(giveOutPrizesAggregate));
-                        status.setRollbackOnly();
-                    }
                     return 1;
                 } catch (DuplicateKeyException e) {
                     status.setRollbackOnly();
-                    log.error("更新中奖记录，唯一索引冲突 userId: {} ", userId, e);
-                    throw new AppException(ResponseCode.INDEX_DUP.getCode(), e);
+                    log.error("发放积分时发生未预期的唯一索引冲突 userId: {} ", userId, e);
+                    throw e;
                 }
             });
         } finally {
@@ -182,6 +197,35 @@ public class AwardRepository implements IAwardRepository {
             if (lock.isLocked() && lock.isHeldByCurrentThread()) {
                 lock.unlock();
             }
+        }
+    }
+
+    private boolean isCompletedAwardRecord(UserAwardRecord persistedAwardRecord, UserAwardRecord expectedAwardRecord) {
+        return persistedAwardRecord != null
+                && PERSISTED_COMPLETED_AWARD_STATE.equals(persistedAwardRecord.getAwardState())
+                && expectedAwardRecord.getAwardId() != null
+                && expectedAwardRecord.getAwardId().equals(persistedAwardRecord.getAwardId());
+    }
+
+    @Override
+    public boolean updateAwardRecordCompletedState(String userId, String orderId) {
+        UserAwardRecord userAwardRecordReq = new UserAwardRecord();
+        userAwardRecordReq.setUserId(userId);
+        userAwardRecordReq.setOrderId(orderId);
+
+        try {
+            dbRouter.doRouter(userId);
+            Boolean updated = transactionTemplate.execute(status -> {
+                if (userAwardRecordDao.updateAwardRecordCompletedState(userAwardRecordReq) == 1) return true;
+                UserAwardRecord existing = userAwardRecordDao.queryByUserIdAndOrderId(userAwardRecordReq);
+                if (existing == null || !PERSISTED_COMPLETED_AWARD_STATE.equals(existing.getAwardState())) {
+                    throw new IllegalStateException("Remote grant succeeded but local award cannot be completed");
+                }
+                return false;
+            });
+            return Boolean.TRUE.equals(updated);
+        } finally {
+            dbRouter.clear();
         }
     }
 }

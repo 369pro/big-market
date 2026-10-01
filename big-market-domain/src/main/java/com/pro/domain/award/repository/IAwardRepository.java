@@ -17,5 +17,7 @@ public interface IAwardRepository {
 
     void saveGiveOutPrizesAggregate(GiveOutPrizesAggregate giveOutPrizesAggregate);
 
+    boolean updateAwardRecordCompletedState(String userId, String orderId);
+
     String queryAwardKey(Integer awardId);
 }

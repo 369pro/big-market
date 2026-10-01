@@ -7,6 +7,6 @@ package com.pro.domain.award.adapter.port;
  */
 public interface IAwardPort {
 
-    void adjustAmount(String userId, Integer increaseQuota) throws Exception;
+    void adjustAmount(String userId, String requestId, Integer increaseQuota) throws Exception;
 
 }

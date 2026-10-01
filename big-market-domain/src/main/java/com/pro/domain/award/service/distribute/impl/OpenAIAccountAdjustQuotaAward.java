@@ -25,6 +25,10 @@ public class OpenAIAccountAdjustQuotaAward implements IDistributeAward {
 
     @Override
     public void giveOutPrizes(DistributeAwardEntity distributeAwardEntity) throws Exception {
+        if (StringUtils.isBlank(distributeAwardEntity.getOrderId())) {
+            throw new IllegalArgumentException("award orderId is required for idempotent quota grant");
+        }
+
         // 奖品ID
         Integer awardId = distributeAwardEntity.getAwardId();
         // 查询奖品ID 「优先走透传的随机积分奖品配置」
@@ -32,8 +36,12 @@ public class OpenAIAccountAdjustQuotaAward implements IDistributeAward {
         if (StringUtils.isBlank(awardConfig)) {
             awardConfig = repository.queryAwardConfig(awardId);
         }
-        // 发奖接口
-        port.adjustAmount(distributeAwardEntity.getUserId(), Integer.valueOf(awardConfig));
+        // 发奖接口；订单号作为远端调额接口的幂等键。
+        port.adjustAmount(distributeAwardEntity.getUserId(), distributeAwardEntity.getOrderId(), Integer.valueOf(awardConfig));
+
+        // 远端成功后再完成本地中奖记录。重复消息会被远端唯一键拦截，且本地状态更新也是条件更新。
+        // 已完成的重复消息会被条件更新拦截，不抛异常，避免触发无意义的 MQ 重试。
+        repository.updateAwardRecordCompletedState(distributeAwardEntity.getUserId(), distributeAwardEntity.getOrderId());
     }
 
 }

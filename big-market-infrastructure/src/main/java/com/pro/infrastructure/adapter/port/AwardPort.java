@@ -34,12 +34,13 @@ public class AwardPort implements IAwardPort {
     private IOpenAIAccountService openAIAccountService;
 
     @Override
-    public void adjustAmount(String userId, Integer increaseQuota) throws Exception {
+    public void adjustAmount(String userId, String requestId, Integer increaseQuota) throws Exception {
         try {
             AdjustQuotaRequestDTO requestDTO = AdjustQuotaRequestDTO.builder()
                     .appId(BIG_MARKET_APPID)
                     .appToken(BIG_MARKET_APPTOKEN)
                     .openid(userId)
+                    .requestId(requestId)
                     .increaseQuota(increaseQuota)
                     .build();
 

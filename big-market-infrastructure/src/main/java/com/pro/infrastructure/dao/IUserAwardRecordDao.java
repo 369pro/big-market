@@ -1,6 +1,7 @@
 package com.pro.infrastructure.dao;
 
 import cn.bugstack.middleware.db.router.annotation.DBRouterStrategy;
+import cn.bugstack.middleware.db.router.annotation.DBRouter;
 import com.pro.infrastructure.dao.po.UserAwardRecord;
 import org.apache.ibatis.annotations.Mapper;
 
@@ -14,6 +15,9 @@ import org.apache.ibatis.annotations.Mapper;
 public interface IUserAwardRecordDao {
 
     void insert(UserAwardRecord userAwardRecord);
+
+    @DBRouter
+    UserAwardRecord queryByUserIdAndOrderId(UserAwardRecord userAwardRecordReq);
 
     int updateAwardRecordCompletedState(UserAwardRecord userAwardRecordReq);
 }
