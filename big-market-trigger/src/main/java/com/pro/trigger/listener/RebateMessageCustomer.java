@@ -4,8 +4,6 @@ import java.math.BigDecimal;
 
 import javax.annotation.Resource;
 
-import org.springframework.amqp.rabbit.annotation.Queue;
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -33,7 +31,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 public class RebateMessageCustomer {
-    @Value("${spring.rabbitmq.topic.send_rebate}")
+    @Value("${rocketmq.topic.send_rebate}")
     private String topic;
 
     @Resource
@@ -41,7 +39,6 @@ public class RebateMessageCustomer {
     @Resource
     private ICreditAdjustService creditAdjustService;
 
-    @RabbitListener(queuesToDeclare = @Queue(value = "${spring.rabbitmq.topic.send_rebate}"))
     public void listener(String message) {
         try {
             log.info("监听用户行为返利发送消息 topic: {} message: {}", topic, message);

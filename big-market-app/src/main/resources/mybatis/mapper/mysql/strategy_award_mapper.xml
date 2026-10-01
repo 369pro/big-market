@@ -11,10 +11,18 @@
         <result column="award_count" property="awardCount"/>
         <result column="award_count_surplus" property="awardCountSurplus"/>
         <result column="award_rate" property="awardRate"/>
-        <result column="rule_model" property="ruleModels"/>
+        <result column="rule_models" property="ruleModels"/>
         <result column="sort" property="sort"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <resultMap id="stockInboxMap" type="com.pro.infrastructure.dao.po.StrategyAwardStockInbox">
+        <id column="event_id" property="eventId"/>
+        <result column="strategy_id" property="strategyId"/>
+        <result column="award_id" property="awardId"/>
+        <result column="surplus" property="surplus"/>
+        <result column="created_at" property="createdAt"/>
     </resultMap>
 
     <select id="queryStrategyAwardList" resultMap="dataMap">
@@ -24,14 +32,14 @@
     </select>
 
     <select id="queryStrategyAwardListByStrategyId" parameterType="java.lang.Long" resultMap="dataMap">
-        select strategy_id, award_id, award_title, award_subtitle, award_count, award_count_surplus, award_rate, rule_model, sort
+        select strategy_id, award_id, award_title, award_subtitle, award_count, award_count_surplus, award_rate, rule_models, sort
         from strategy_award
         where strategy_id = #{strategyId}
         order by sort asc
     </select>
 
     <select id="queryStrategyAwardRuleModels" parameterType="com.pro.infrastructure.dao.po.StrategyAward" resultType="java.lang.String">
-        select rule_model from strategy_award
+        select rule_models from strategy_award
         where strategy_id = #{strategyId} and award_id = #{awardId}
     </select>
 
@@ -47,6 +55,20 @@
         where strategy_id = #{strategyId} and award_id = #{awardId} and award_count_surplus >= #{count}
     </update>
 
+    <insert id="insertStrategyAwardStockInbox">
+        insert into strategy_award_stock_inbox
+            (event_id, strategy_id, award_id, surplus)
+        values
+            (#{eventId}, #{strategyId}, #{awardId}, #{surplus})
+    </insert>
+
+    <select id="queryStrategyAwardStockInbox" resultMap="stockInboxMap">
+        select event_id, strategy_id, award_id, surplus, created_at
+        from strategy_award_stock_inbox
+        where event_id = #{eventId}
+        for update
+    </select>
+
     <update id="syncStrategyAwardStock">
         update strategy_award
         set award_count_surplus = least(award_count_surplus, #{surplus})
@@ -54,7 +76,7 @@
     </update>
 
     <select id="queryStrategyAward" parameterType="com.pro.infrastructure.dao.po.StrategyAward" resultMap="dataMap">
-        select strategy_id, award_id, award_title, award_subtitle, award_count, award_count_surplus, award_rate, rule_model, sort
+        select strategy_id, award_id, award_title, award_subtitle, award_count, award_count_surplus, award_rate, rule_models, sort
         from strategy_award
         where strategy_id = #{strategyId} and award_id = #{awardId}
     </select>

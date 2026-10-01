@@ -2,6 +2,7 @@ package com.pro.domain.strategy.service.raffle;
 
 
 import com.pro.domain.strategy.model.entity.StrategyAwardEntity;
+import com.pro.domain.strategy.model.valobj.StrategyAwardStockDeductEvent;
 import com.pro.domain.strategy.model.valobj.RuleWeightVO;
 import com.pro.domain.strategy.model.valobj.StrategyAwardStockKeyVO;
 import com.pro.domain.strategy.service.AbstractRaffleStrategy;
@@ -87,6 +88,11 @@ public class DefaultRaffleStrategy extends AbstractRaffleStrategy implements IRa
     @Override
     public void syncStrategyAwardStock(Long strategyId, Integer awardId, int surplus) {
         repository.syncStrategyAwardStock(strategyId, awardId, surplus);
+    }
+
+    @Override
+    public void syncStrategyAwardStock(List<StrategyAwardStockDeductEvent> events) {
+        repository.syncStrategyAwardStock(events);
     }
 
     @Override

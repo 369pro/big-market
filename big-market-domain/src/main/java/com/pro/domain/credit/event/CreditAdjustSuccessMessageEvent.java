@@ -21,7 +21,7 @@ import java.util.Date;
 @Component
 public class CreditAdjustSuccessMessageEvent extends BaseEvent<CreditAdjustSuccessMessageEvent.CreditAdjustSuccessMessage> {
 
-    @Value("${spring.rabbitmq.topic.credit_adjust_success}")
+    @Value("${rocketmq.topic.credit_adjust_success}")
     private String topic;
 
     @Override

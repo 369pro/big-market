@@ -2,8 +2,6 @@ package com.pro.trigger.listener;
 
 import javax.annotation.Resource;
 
-import org.springframework.amqp.rabbit.annotation.Queue;
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -27,10 +25,9 @@ public class SendAwardCustomer {
     @Resource
     private IAwardService awardService;
 
-    @Value("${spring.rabbitmq.topic.send_award}")
+    @Value("${rocketmq.topic.send_award}")
     private String topic;
 
-    @RabbitListener(queuesToDeclare = @Queue(value = "${spring.rabbitmq.topic.send_award}"))
     public void listener(String message) throws Exception {
         try {
             log.info("监听用户奖品发送消息，发奖开始 topic: {} message: {}", topic, message);

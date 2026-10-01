@@ -7,6 +7,7 @@ import com.pro.domain.strategy.model.entity.StrategyRuleEntity;
 import com.pro.domain.strategy.model.valobj.RuleTreeVO;
 import com.pro.domain.strategy.model.valobj.RuleWeightVO;
 import com.pro.domain.strategy.model.valobj.StrategyAwardRuleModelVO;
+import com.pro.domain.strategy.model.valobj.StrategyAwardStockDeductEvent;
 import com.pro.domain.strategy.model.valobj.StrategyAwardStockKeyVO;
 
 import java.util.Date;
@@ -92,6 +93,9 @@ public interface IStrategyRepository {
 
     /** 将数据库库存幂等同步到 Redis 已扣减后的库存快照。 */
     void syncStrategyAwardStock(Long strategyId, Integer awardId, int surplus);
+
+    /** 批量幂等同步具有稳定事件 ID 的库存快照。 */
+    void syncStrategyAwardStock(List<StrategyAwardStockDeductEvent> events);
 
     /**
      * 根据策略ID+奖品ID的唯一值组合，查询奖品信息

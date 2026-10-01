@@ -3,7 +3,18 @@ spring:
     name: big-market-app
   profiles:
     active: dev
-  rabbitmq:
-    publisher-confirm-type: correlated
-    topic:
-      strategy_award_stock_deduct: strategy_award_stock_deduct
+
+rocketmq:
+  name-server: ${ROCKETMQ_NAMESRV_ADDR:127.0.0.1:9876}
+  producer-group: big-market-producer
+  consumer-group-prefix: big-market
+  send-timeout-ms: 5000
+  stock:
+    batch-size: 500
+    flush-interval-ms: 1000
+  topic:
+    activity_sku_stock_zero: activity_sku_stock_zero
+    send_award: send_award
+    send_rebate: send_rebate
+    credit_adjust_success: credit_adjust_success
+    strategy_award_stock_deduct: strategy_award_stock_deduct

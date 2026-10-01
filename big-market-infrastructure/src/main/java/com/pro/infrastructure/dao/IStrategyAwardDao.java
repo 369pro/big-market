@@ -1,6 +1,7 @@
 package com.pro.infrastructure.dao;
 
 import com.pro.infrastructure.dao.po.StrategyAward;
+import com.pro.infrastructure.dao.po.StrategyAwardStockInbox;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -27,10 +28,18 @@ public interface IStrategyAwardDao {
      */
     void updateStrategyAwardStockBatch(@Param("strategyId") Long strategyId, @Param("awardId") Integer awardId, @Param("count") int count);
 
+    /** 写入库存回写 inbox；返回 1 表示首次处理，0 表示重复事件。 */
+    int insertStrategyAwardStockInbox(@Param("eventId") String eventId,
+                                      @Param("strategyId") Long strategyId,
+                                      @Param("awardId") Integer awardId,
+                                      @Param("surplus") int surplus);
+
+    StrategyAwardStockInbox queryStrategyAwardStockInbox(@Param("eventId") String eventId);
+
     /** 幂等同步 Redis 扣减后的库存快照，只允许库存向下变化。 */
-    void syncStrategyAwardStock(@Param("strategyId") Long strategyId,
-                                @Param("awardId") Integer awardId,
-                                @Param("surplus") int surplus);
+    int syncStrategyAwardStock(@Param("strategyId") Long strategyId,
+                               @Param("awardId") Integer awardId,
+                               @Param("surplus") int surplus);
 
     StrategyAward queryStrategyAward(StrategyAward strategyAwardReq);
 

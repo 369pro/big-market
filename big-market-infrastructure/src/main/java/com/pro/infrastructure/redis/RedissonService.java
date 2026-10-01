@@ -211,7 +211,7 @@ public class RedissonService implements IRedisService {
     @Override
     public List<Long> execStockDeduction(String stockKey, String trackSetKey,
                                           long expireMs, String eventPrefix, String lockKeyPrefix) {
-        RScript script = redissonClient.getScript();
+        RScript script = redissonClient.getScript(org.redisson.client.codec.StringCodec.INSTANCE);
         List<Object> args = Arrays.asList(expireMs, eventPrefix, lockKeyPrefix);
         List<Object> keys = Arrays.asList(stockKey, trackSetKey);
         try {
@@ -221,6 +221,8 @@ public class RedissonService implements IRedisService {
                         stockDeductionSha, RScript.ReturnType.MULTI, keys, args.toArray()));
             }
         } catch (Exception e) {
+            if (!(e instanceof org.redisson.client.RedisException)
+                    || e.getMessage() == null || !e.getMessage().startsWith("NOSCRIPT")) throw e;
             log.warn("EVALSHA 执行失败，回退到 EVAL stockKey={}", stockKey, e);
         }
         // 回退到 eval 模式（脚本未预加载或 SHA 过期）
@@ -238,14 +240,14 @@ public class RedissonService implements IRedisService {
 
     @Override
     public Set<String> randomMembersFromSet(String key, int count) {
-        RSet<String> set = redissonClient.getSet(key);
+        RSet<String> set = redissonClient.getSet(key, org.redisson.client.codec.StringCodec.INSTANCE);
         Set<String> members = set.random(count);
         return members == null ? Collections.emptySet() : members;
     }
 
     @Override
     public boolean removeFromSet(String key, String member) {
-        return redissonClient.<String>getSet(key).remove(member);
+        return redissonClient.<String>getSet(key, org.redisson.client.codec.StringCodec.INSTANCE).remove(member);
     }
 
     /** Redisson Lua 返回的 List<Object> 转 List<Long> */

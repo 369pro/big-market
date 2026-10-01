@@ -13,7 +13,7 @@ import java.util.Date;
 
 @Component
 public class SendRebateMessageEvent extends BaseEvent<SendRebateMessageEvent.RebateMessage> {
-    @Value("${spring.rabbitmq.topic.send_rebate}")
+    @Value("${rocketmq.topic.send_rebate}")
     private String topic;
 
 

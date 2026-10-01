@@ -15,7 +15,7 @@ import java.util.Date;
 @Component
 public class ActivitySkuStockZeroMessageEvent extends BaseEvent<Long> {
 
-    @Value("${spring.rabbitmq.topic.activity_sku_stock_zero}")
+    @Value("${rocketmq.topic.activity_sku_stock_zero}")
     private String topic;
 
     @Override

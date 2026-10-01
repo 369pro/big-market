@@ -15,7 +15,7 @@ import java.util.Date;
 public class StrategyAwardStockDeductMessageEvent
         extends BaseEvent<StrategyAwardStockDeductMessageEvent.StockDeductMessage> {
 
-    @Value("${spring.rabbitmq.topic.strategy_award_stock_deduct}")
+    @Value("${rocketmq.topic.strategy_award_stock_deduct}")
     private String topic;
 
     @Override
@@ -41,12 +41,17 @@ public class StrategyAwardStockDeductMessageEvent
     @AllArgsConstructor
     @NoArgsConstructor
     public static class StockDeductMessage {
+        /** UUID token retained so repeated envelope construction keeps one event ID. */
+        private String eventId;
         private Long strategyId;
         private Integer awardId;
         private Integer surplus;
 
         public String outboxMember() {
-            return strategyId + ":" + awardId + ":" + java.util.UUID.randomUUID() + ":" + surplus;
+            if (eventId == null || eventId.trim().isEmpty()) {
+                eventId = java.util.UUID.randomUUID().toString();
+            }
+            return strategyId + ":" + awardId + ":" + eventId + ":" + surplus;
         }
 
         public static StockDeductMessage fromOutboxMember(String member) {
@@ -55,6 +60,7 @@ public class StrategyAwardStockDeductMessageEvent
                 throw new IllegalArgumentException("非法奖品库存 MQ outbox 成员: " + member);
             }
             return StockDeductMessage.builder()
+                    .eventId(parts[2])
                     .strategyId(Long.valueOf(parts[0]))
                     .awardId(Integer.valueOf(parts[1]))
                     .surplus(Integer.valueOf(parts[3]))

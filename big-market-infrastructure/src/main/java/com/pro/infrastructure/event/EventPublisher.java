@@ -3,9 +3,14 @@ package com.pro.infrastructure.event;
 import com.alibaba.fastjson.JSON;
 import com.pro.types.event.BaseEvent;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.apache.rocketmq.client.producer.DefaultMQProducer;
+import org.apache.rocketmq.client.producer.SendResult;
+import org.apache.rocketmq.client.producer.SendStatus;
+import org.apache.rocketmq.common.message.Message;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import java.nio.charset.StandardCharsets;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥
@@ -16,40 +21,42 @@ import org.springframework.stereotype.Component;
 @Component
 public class EventPublisher {
 
+    private final DefaultMQProducer producer;
+
     @Autowired
-    private RabbitTemplate rabbitTemplate;
+    public EventPublisher(DefaultMQProducer producer) {
+        this.producer = producer;
+    }
 
     public void publish(String topic, BaseEvent.EventMessage<?> eventMessage) {
-        try {
-            String messageJson = JSON.toJSONString(eventMessage);
-            rabbitTemplate.convertAndSend(topic, messageJson);
-            log.info("发送MQ消息 topic:{} message:{}", topic, messageJson);
-        } catch (Exception e) {
-            log.error("发送MQ消息失败 topic:{} message:{}", topic, JSON.toJSONString(eventMessage), e);
-            throw e;
-        }
+        send(topic, JSON.toJSONString(eventMessage), eventMessage.getId());
     }
 
     public void publish(String topic, String eventMessageJSON){
-        try {
-            rabbitTemplate.convertAndSend(topic, eventMessageJSON);
-            log.info("发送MQ消息 topic:{} message:{}", topic, eventMessageJSON);
-        } catch (Exception e) {
-            log.error("发送MQ消息失败 topic:{} message:{}", topic, eventMessageJSON, e);
-            throw e;
-        }
+        send(topic, eventMessageJSON, null);
     }
 
     /**
-     * 在独占 Channel 上发布并等待 broker confirm。只有确认成功后，调用方才能删除 outbox。
+     * 同步发送并检查 SEND_OK，确认成功后调用方才能删除 outbox。
      */
     public void publishConfirm(String topic, BaseEvent.EventMessage<?> eventMessage) {
-        String messageJson = JSON.toJSONString(eventMessage);
-        rabbitTemplate.invoke(operations -> {
-            operations.convertAndSend(topic, messageJson);
-            operations.waitForConfirmsOrDie(5000);
-            return null;
-        });
-        log.info("发送MQ消息并收到确认 topic:{} messageId:{}", topic, eventMessage.getId());
+        publish(topic, eventMessage);
+    }
+
+    private void send(String topic, String json, String eventId) {
+        Message message = new Message(topic, json.getBytes(StandardCharsets.UTF_8));
+        if (eventId != null) message.setKeys(eventId);
+        try {
+            SendResult result = producer.send(message);
+            if (result == null || result.getSendStatus() != SendStatus.SEND_OK) {
+                throw new IllegalStateException("RocketMQ did not confirm delivery: " + result);
+            }
+            log.info("RocketMQ sent topic:{} messageId:{}", topic, result.getMsgId());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("RocketMQ send interrupted: " + topic, e);
+        } catch (Exception e) {
+            throw new IllegalStateException("RocketMQ send failed: " + topic, e);
+        }
     }
 }

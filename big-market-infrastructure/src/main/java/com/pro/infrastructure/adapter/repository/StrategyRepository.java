@@ -2,9 +2,12 @@ package com.pro.infrastructure.adapter.repository;
 
 import static com.pro.types.enums.ResponseCode.UN_ASSEMBLED_STRATEGY_ARMORY;
 
+import cn.bugstack.middleware.db.router.strategy.IDBRouterStrategy;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -16,7 +19,9 @@ import javax.annotation.Resource;
 import org.redisson.api.RBlockingQueue;
 import org.redisson.api.RDelayedQueue;
 import org.redisson.api.RMap;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.pro.domain.strategy.model.entity.StrategyAwardEntity;
 import com.pro.domain.strategy.model.entity.StrategyEntity;
@@ -28,6 +33,7 @@ import com.pro.domain.strategy.model.valobj.RuleTreeNodeVO;
 import com.pro.domain.strategy.model.valobj.RuleTreeVO;
 import com.pro.domain.strategy.model.valobj.RuleWeightVO;
 import com.pro.domain.strategy.model.valobj.StrategyAwardRuleModelVO;
+import com.pro.domain.strategy.model.valobj.StrategyAwardStockDeductEvent;
 import com.pro.domain.strategy.model.valobj.StrategyAwardStockKeyVO;
 import com.pro.domain.strategy.repository.IStrategyRepository;
 import com.pro.domain.strategy.service.rule.chain.factory.DefaultChainFactory;
@@ -47,6 +53,7 @@ import com.pro.infrastructure.dao.po.RuleTreeNode;
 import com.pro.infrastructure.dao.po.RuleTreeNodeLine;
 import com.pro.infrastructure.dao.po.Strategy;
 import com.pro.infrastructure.dao.po.StrategyAward;
+import com.pro.infrastructure.dao.po.StrategyAwardStockInbox;
 import com.pro.infrastructure.dao.po.StrategyRule;
 import com.pro.infrastructure.redis.IRedisService;
 import com.pro.infrastructure.event.StrategyAwardStockMessagePublisher;
@@ -88,6 +95,10 @@ public class StrategyRepository implements IStrategyRepository {
     private IRedisService redisService;
     @Resource
     private StrategyAwardStockMessagePublisher stockMessagePublisher;
+    @Resource
+    private TransactionTemplate transactionTemplate;
+    @Resource
+    private IDBRouterStrategy dbRouter;
 
     @Override
     public List<StrategyAwardEntity> queryStrategyAwardList(Long strategyId) {
@@ -275,7 +286,7 @@ public class StrategyRepository implements IStrategyRepository {
         return subtractionAwardStock(cacheKey, null);
     }
     /**
-     * 扣减库存（Lua 原子脚本 + Redis outbox + RabbitMQ）
+     * 扣减库存（Lua 原子脚本 + Redis outbox + RocketMQ）
      * <p>相比旧实现的改进：
      * <ul>
      *   <li>decr + setNx 合并为一次原子执行，消除并发窗口</li>
@@ -370,6 +381,81 @@ public class StrategyRepository implements IStrategyRepository {
     @Override
     public void syncStrategyAwardStock(Long strategyId, Integer awardId, int surplus) {
         strategyAwardDao.syncStrategyAwardStock(strategyId, awardId, surplus);
+    }
+
+    @Override
+    public void syncStrategyAwardStock(List<StrategyAwardStockDeductEvent> events) {
+        if (events == null || events.isEmpty()) return;
+
+        try {
+            // Strategy configuration and its inbox live in the unsharded default database.
+            dbRouter.setDBKey(0);
+            dbRouter.setTBKey(0);
+            transactionTemplate.execute(status -> {
+                Map<String, StrategyAwardStockDeductEvent> newEvents = new LinkedHashMap<>();
+                for (StrategyAwardStockDeductEvent event : events) {
+                    validateStockEvent(event);
+                    int inserted;
+                    try {
+                        inserted = strategyAwardDao.insertStrategyAwardStockInbox(
+                                event.getEventId(), event.getStrategyId(), event.getAwardId(), event.getSurplus());
+                    } catch (DuplicateKeyException duplicate) {
+                        StrategyAwardStockInbox existing =
+                                strategyAwardDao.queryStrategyAwardStockInbox(event.getEventId());
+                        if (existing == null || !sameStockEvent(event, existing)) {
+                            status.setRollbackOnly();
+                            throw new IllegalArgumentException("库存事件 ID 载荷冲突: " + event.getEventId(), duplicate);
+                        }
+                        continue;
+                    }
+                    if (inserted == 1) {
+                        newEvents.putIfAbsent(event.getEventId(), event);
+                    } else {
+                        status.setRollbackOnly();
+                        throw new IllegalStateException("策略库存 inbox 写入结果异常: " + event.getEventId());
+                    }
+                }
+
+                Map<String, StrategyAwardStockDeductEvent> lowestSnapshotByAward = new HashMap<>();
+                for (StrategyAwardStockDeductEvent event : newEvents.values()) {
+                    String awardKey = event.getStrategyId() + Constants.COLON + event.getAwardId();
+                    lowestSnapshotByAward.merge(awardKey, event,
+                            (left, right) -> left.getSurplus() <= right.getSurplus() ? left : right);
+                }
+
+                for (StrategyAwardStockDeductEvent event : lowestSnapshotByAward.values()) {
+                    int updated = strategyAwardDao.syncStrategyAwardStock(
+                            event.getStrategyId(), event.getAwardId(), event.getSurplus());
+                    if (updated == 0) {
+                        StrategyAward lookup = new StrategyAward();
+                        lookup.setStrategyId(event.getStrategyId());
+                        lookup.setAwardId(event.getAwardId());
+                        if (strategyAwardDao.queryStrategyAward(lookup) == null) {
+                            throw new IllegalStateException("策略奖品不存在，库存事件无法回写: "
+                                    + event.getStrategyId() + Constants.COLON + event.getAwardId());
+                        }
+                    }
+                }
+                return null;
+            });
+        } finally {
+            dbRouter.clear();
+        }
+    }
+
+    private void validateStockEvent(StrategyAwardStockDeductEvent event) {
+        if (event == null || event.getEventId() == null || event.getEventId().trim().isEmpty()
+                || event.getEventId().length() > 128
+                || event.getStrategyId() == null || event.getAwardId() == null
+                || event.getSurplus() == null || event.getSurplus() < 0) {
+            throw new IllegalArgumentException("非法策略奖品库存回写事件: " + event);
+        }
+    }
+
+    private boolean sameStockEvent(StrategyAwardStockDeductEvent event, StrategyAwardStockInbox existing) {
+        return event.getStrategyId().equals(existing.getStrategyId())
+                && event.getAwardId().equals(existing.getAwardId())
+                && event.getSurplus().equals(existing.getSurplus());
     }
 
     @Override

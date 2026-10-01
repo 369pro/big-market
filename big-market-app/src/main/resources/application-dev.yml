@@ -14,25 +14,12 @@ app:
     # 跨域，开发阶段可以设置为 * 不限制
     cross-origin: '*'
 
-# Spring 配置；rabbitmq
+# Spring 配置
 spring:
   cloud:
     zookeeper:
       enabled: false  # 已改用 Dubbo+Nacos，完全禁用 Spring Cloud ZK，避免其创建额外的 CuratorFramework bean
 
-  rabbitmq:
-    addresses: 81.68.91.52
-    port: 5672
-    username: admin
-    password: password
-    listener:
-      simple:
-        prefetch: 1 # 每次投递n个消息，消费完在投递n个
-    topic:
-      activity_sku_stock_zero: activity_sku_stock_zero
-      send_award: send_award
-      send_rebate: send_rebate
-      credit_adjust_success: credit_adjust_success
   elasticsearch.datasource:
     driverClassName: org.elasticsearch.xpack.sql.jdbc.EsDriver
     url: jdbc:es://http://111.228.31.22:9200
