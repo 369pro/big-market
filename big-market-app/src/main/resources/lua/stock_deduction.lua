@@ -1,8 +1,8 @@
--- 库存扣减原子操作: decr + 滑块锁 + 追踪Set
+-- 库存扣减原子操作: decr + 滑块锁 + MQ outbox
 -- KEYS[1] = stockKey     (库存缓存 key)
--- KEYS[2] = trackSetKey  (追踪 Set, 用于批量回写DB)
+-- KEYS[2] = outboxSetKey (MQ outbox Set, 用于发送失败补偿)
 -- ARGV[1] = expireMs     (锁过期毫秒, "0"=永不过期)
--- ARGV[2] = setMember    (Set 成员, 例: "100001:101")
+-- ARGV[2] = memberPrefix (成员前缀, 例: "100001:101:uuid")
 -- ARGV[3] = lockKeyPrefix(锁 key 前缀, 即 stockKey)
 --
 -- 返回: {status, surplus}
@@ -40,8 +40,8 @@ if not lockOk then
     return {0, surplus}
 end
 
--- 6. 加入追踪 Set, 供定时任务 SPOP 后批量 UPDATE DB
-redis.call('SADD', KEYS[2], ARGV[2])
+-- 6. 写入 MQ outbox。surplus 对同一奖品的每次成功扣减唯一，Set 不会吞掉重复扣减。
+redis.call('SADD', KEYS[2], ARGV[2] .. ':' .. surplus)
 
 -- 7. 返回成功
 return {1, surplus}

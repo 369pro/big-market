@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Resource;
@@ -48,6 +49,7 @@ import com.pro.infrastructure.dao.po.Strategy;
 import com.pro.infrastructure.dao.po.StrategyAward;
 import com.pro.infrastructure.dao.po.StrategyRule;
 import com.pro.infrastructure.redis.IRedisService;
+import com.pro.infrastructure.event.StrategyAwardStockMessagePublisher;
 import com.pro.types.common.Constants;
 import com.pro.types.exception.AppException;
 
@@ -84,6 +86,8 @@ public class StrategyRepository implements IStrategyRepository {
 
     @Resource
     private IRedisService redisService;
+    @Resource
+    private StrategyAwardStockMessagePublisher stockMessagePublisher;
 
     @Override
     public List<StrategyAwardEntity> queryStrategyAwardList(Long strategyId) {
@@ -271,12 +275,12 @@ public class StrategyRepository implements IStrategyRepository {
         return subtractionAwardStock(cacheKey, null);
     }
     /**
-     * 扣减库存（Lua 原子脚本: decr + 滑块锁 + 追踪 Set SADD）
+     * 扣减库存（Lua 原子脚本 + Redis outbox + RabbitMQ）
      * <p>相比旧实现的改进：
      * <ul>
      *   <li>decr + setNx 合并为一次原子执行，消除并发窗口</li>
      *   <li>setNx 失败时自动 INCR 回滚 decr，库存不丢失</li>
-     *   <li>同时 SADD 入追踪 Set，供定时任务 SPOP 批量回写 DB</li>
+     *   <li>写入唯一 outbox 事件，MQ 失败时由定时任务补发</li>
      * </ul>
      *
      * @param cacheKey    缓存Key (格式: strategy_award_count_key_{sid}_{aid})
@@ -289,21 +293,31 @@ public class StrategyRepository implements IStrategyRepository {
         if (null != endDateTime) {
             expireMs = endDateTime.getTime() - System.currentTimeMillis() + TimeUnit.DAYS.toMillis(1);
         }
-        // 2. 从 cacheKey 提取 setMember: "strategy_award_count_key_100001_101" → "100001:101"
+        // 2. 从 cacheKey 提取事件前缀: "strategy_award_count_key_100001_101" → "100001:101"
         String suffix = cacheKey.substring(Constants.RedisKey.STRATEGY_AWARD_COUNT_KEY.length());
-        String setMember = suffix.replace(Constants.UNDERLINE, Constants.COLON);
-        // 3. 执行 Lua 脚本 (decr + setNx + 回滚 + SADD 全部原子)
+        String strategyAwardKey = suffix.replace(Constants.UNDERLINE, Constants.COLON);
+        String eventPrefix = strategyAwardKey + Constants.COLON + UUID.randomUUID().toString();
+        // 3. 执行 Lua 脚本 (decr + setNx + 回滚 + 写 outbox 全部原子)
         List<Long> result = redisService.execStockDeduction(
                 cacheKey,
-                Constants.RedisKey.STRATEGY_AWARD_TRACK_SET,
+                Constants.RedisKey.STRATEGY_AWARD_MQ_OUTBOX_SET,
                 expireMs,
-                setMember,
+                eventPrefix,
                 cacheKey);
         int status = result.get(0).intValue();
         if (status != 1) {
             log.warn("策略奖品库存扣减失败 status={} cacheKey={}", status, cacheKey);
         }
-        return status == 1;
+        if (status != 1) return false;
+
+        // 4. 尝试实时投递；失败不影响已成功的抽奖，outbox 会由定时任务补发。
+        String outboxMember = eventPrefix + Constants.COLON + result.get(1);
+        try {
+            stockMessagePublisher.publish(outboxMember);
+        } catch (Exception e) {
+            log.error("奖品库存扣减MQ发送失败，等待outbox补偿 member={}", outboxMember, e);
+        }
+        return true;
     }
 
     @Override
@@ -351,6 +365,11 @@ public class StrategyRepository implements IStrategyRepository {
     @Override
     public void updateStrategyAwardStock(Long strategyId, Integer awardId, int count) {
         strategyAwardDao.updateStrategyAwardStockBatch(strategyId, awardId, count);
+    }
+
+    @Override
+    public void syncStrategyAwardStock(Long strategyId, Integer awardId, int surplus) {
+        strategyAwardDao.syncStrategyAwardStock(strategyId, awardId, surplus);
     }
 
     @Override

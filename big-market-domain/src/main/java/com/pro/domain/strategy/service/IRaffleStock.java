@@ -50,4 +50,7 @@ public interface IRaffleStock {
      */
     void updateStrategyAwardStock(Long strategyId, Integer awardId, int count);
 
+    /** 将数据库库存幂等同步到 Redis 已扣减后的库存快照。 */
+    void syncStrategyAwardStock(Long strategyId, Integer awardId, int surplus);
+
 }

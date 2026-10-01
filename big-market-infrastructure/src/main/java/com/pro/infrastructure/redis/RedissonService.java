@@ -190,7 +190,7 @@ public class RedissonService implements IRedisService {
         return redissonClient.getBucket(key).trySet("lock", expired, timeUnit);
     }
 
-    // ==================== Lua 脚本 + Set 批量回写 ====================
+    // ==================== Lua 脚本 + MQ outbox ====================
 
     @PostConstruct
     public void loadStockDeductionScript() {
@@ -210,9 +210,9 @@ public class RedissonService implements IRedisService {
 
     @Override
     public List<Long> execStockDeduction(String stockKey, String trackSetKey,
-                                          long expireMs, String setMember, String lockKeyPrefix) {
+                                          long expireMs, String eventPrefix, String lockKeyPrefix) {
         RScript script = redissonClient.getScript();
-        List<Object> args = Arrays.asList(expireMs, setMember, lockKeyPrefix);
+        List<Object> args = Arrays.asList(expireMs, eventPrefix, lockKeyPrefix);
         List<Object> keys = Arrays.asList(stockKey, trackSetKey);
         try {
             // 优先使用 EVALSHA（预加载过）
@@ -231,27 +231,21 @@ public class RedissonService implements IRedisService {
                 "local lockOk; if ARGV[1] == '0' then lockOk = redis.call('SET', lockKey, '1', 'NX') " +
                 "else lockOk = redis.call('SET', lockKey, '1', 'PX', ARGV[1], 'NX') end\n" +
                 "if not lockOk then redis.call('INCR', KEYS[1]); return {0, surplus}; end\n" +
-                "redis.call('SADD', KEYS[2], ARGV[2]); return {1, surplus}";
+                "redis.call('SADD', KEYS[2], ARGV[2] .. ':' .. surplus); return {1, surplus}";
         return toLongList(script.eval(RScript.Mode.READ_WRITE,
                 rawScript, RScript.ReturnType.MULTI, keys, args.toArray()));
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public Set<String> popFromSet(String key, long count) {
-        // Redisson RSet 不支持 SPOP count，用 Lua 封装
-        RScript script = redissonClient.getScript();
-        List<Object> result = script.eval(RScript.Mode.READ_WRITE,
-                "return redis.call('SPOP', KEYS[1], ARGV[1])",
-                RScript.ReturnType.MULTI,
-                Collections.singletonList(key), count);
-        if (result == null || result.isEmpty()) {
-            return Collections.emptySet();
-        }
-        return result.stream()
-                .filter(Objects::nonNull)
-                .map(Object::toString)
-                .collect(Collectors.toSet());
+    public Set<String> randomMembersFromSet(String key, int count) {
+        RSet<String> set = redissonClient.getSet(key);
+        Set<String> members = set.random(count);
+        return members == null ? Collections.emptySet() : members;
+    }
+
+    @Override
+    public boolean removeFromSet(String key, String member) {
+        return redissonClient.<String>getSet(key).remove(member);
     }
 
     /** Redisson Lua 返回的 List<Object> 转 List<Long> */

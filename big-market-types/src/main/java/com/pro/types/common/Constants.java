@@ -26,8 +26,8 @@ public class Constants {
         public static String USER_CREDIT_ACCOUNT_LOCK = "user_credit_account_lock_";
         public static String ACTIVITY_ACCOUNT_UPDATE_LOCK = "activity_account_update_lock_";
         public static String STRATEGY_ARMORY_ALGORITHM_KEY = "strategy_armory_algorithm_key_";
-        // Lua 脚本奖品库存扣减追踪 Set（替代延迟队列做批量回写DB）
-        public static String STRATEGY_AWARD_TRACK_SET = "strategy_award_track_set";
+        // Lua 原子写入的奖品库存 MQ outbox，broker confirm 后删除。
+        public static String STRATEGY_AWARD_MQ_OUTBOX_SET = "strategy_award_stock_mq_outbox_set";
     }
 
 }

@@ -39,4 +39,17 @@ public class EventPublisher {
             throw e;
         }
     }
+
+    /**
+     * 在独占 Channel 上发布并等待 broker confirm。只有确认成功后，调用方才能删除 outbox。
+     */
+    public void publishConfirm(String topic, BaseEvent.EventMessage<?> eventMessage) {
+        String messageJson = JSON.toJSONString(eventMessage);
+        rabbitTemplate.invoke(operations -> {
+            operations.convertAndSend(topic, messageJson);
+            operations.waitForConfirmsOrDie(5000);
+            return null;
+        });
+        log.info("发送MQ消息并收到确认 topic:{} messageId:{}", topic, eventMessage.getId());
+    }
 }

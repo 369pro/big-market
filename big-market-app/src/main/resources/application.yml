@@ -3,3 +3,7 @@ spring:
     name: big-market-app
   profiles:
     active: dev
+  rabbitmq:
+    publisher-confirm-type: correlated
+    topic:
+      strategy_award_stock_deduct: strategy_award_stock_deduct

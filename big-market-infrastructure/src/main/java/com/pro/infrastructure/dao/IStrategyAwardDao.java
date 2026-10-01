@@ -27,6 +27,11 @@ public interface IStrategyAwardDao {
      */
     void updateStrategyAwardStockBatch(@Param("strategyId") Long strategyId, @Param("awardId") Integer awardId, @Param("count") int count);
 
+    /** 幂等同步 Redis 扣减后的库存快照，只允许库存向下变化。 */
+    void syncStrategyAwardStock(@Param("strategyId") Long strategyId,
+                                @Param("awardId") Integer awardId,
+                                @Param("surplus") int surplus);
+
     StrategyAward queryStrategyAward(StrategyAward strategyAwardReq);
 
     List<StrategyAward> queryOpenActivityStrategyAwardList();

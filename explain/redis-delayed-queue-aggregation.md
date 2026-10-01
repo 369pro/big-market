@@ -5,17 +5,17 @@
 ```
                     奖品库存 (award)                    活动库存 (activity)
                     ──────────────                      ──────────────────
-热路径：    Lua 脚本 (decr+锁+Set SADD)          decr + setNx + 延迟队列 offer
+热路径：    Lua 脚本 (decr+锁+MQ outbox)         decr + setNx + 延迟队列 offer
                  ↓                                        ↓
-异步回写：   Set SPOP → 分组计数 → UPDATE -count    延迟队列 drainTo → count → UPDATE -count
+异步回写：   RabbitMQ 批量消费 → 幂等同步库存       延迟队列 drainTo → count → UPDATE -count
 ```
 
-- **奖品库存**：Lua 原子脚本 + Redis Set 追踪 → SPOP 分组批量
+- **奖品库存**：Lua 原子脚本 + Redis outbox → RabbitMQ 批量消费
 - **活动库存**：原有 decr + setNx + 延迟队列 → drainTo 批量（保持不动）
 
 ---
 
-## 一、奖品侧：Lua 脚本 + Redis Set
+## 一、奖品侧：Lua 脚本 + RabbitMQ 批量消费
 
 ### 问题
 
@@ -30,7 +30,7 @@ T1: setNx(key_0) → FAIL → 库存已减但锁未加，库存永久丢失
 
 ### 方案
 
-Lua 脚本将 decr + setNx + SADD 合并为一次原子执行。setNx 失败时自动 INCR 回滚 decr。
+Lua 脚本将 decr + setNx + outbox SADD 合并为一次原子执行。setNx 失败时自动 INCR 回滚 decr。
 
 ```
 stock_deduction.lua
@@ -39,7 +39,7 @@ stock_deduction.lua
 2. if surplus < 0          → 恢复0, 返回失败
 3. SET lockKey NX [PX]     → 滑块锁
 4. if 锁失败               → INCR 回滚, 返回失败
-5. SADD trackSet setMember → 记录到追踪 Set
+5. SADD outbox uniqueEvent → 记录待发送 MQ 事件
 6. 返回成功
 ```
 
@@ -48,31 +48,26 @@ stock_deduction.lua
 | 文件 | 改动 |
 |---|---|
 | `resources/lua/stock_deduction.lua` | **新增** Lua 脚本 |
-| `Constants.java` | 新增 `STRATEGY_AWARD_TRACK_SET` 常量 |
-| `IRedisService.java` | 新增 `execStockDeduction()`、`popFromSet()` |
-| `RedissonService.java` | 实现 Lua 脚本执行 + SPOP + 启动预加载 SHA |
+| `Constants.java` | 新增 `STRATEGY_AWARD_MQ_OUTBOX_SET` 常量 |
+| `IRedisService.java` | 新增 Lua 扣减与 outbox 操作 |
+| `RedissonService.java` | 实现 Lua 脚本执行 + outbox + 启动预加载 SHA |
 | `StrategyRepository.java` | `subtractionAwardStock()` 改用 Lua 脚本 |
 | `RuleStockLogicTreeNode.java` | 移除 `awardStockConsumeSendQueue()` 调用（Lua SADD 替代） |
 | `IStrategyRepository.java` | 新增 `takeQueueValueCount()`、`updateStrategyAwardStock(count)` |
 | `IRaffleStock.java` | 同上 |
 | `DefaultRaffleStrategy.java` | 委托实现 |
-| `IStrategyAwardDao.java` | 新增 `updateStrategyAwardStockBatch` |
-| `strategy_award_mapper.xml` | 新增批量 UPDATE SQL |
-| `UpdateAwardStockJob.java` | SPOP Set → 分组计数 → 批量 UPDATE |
+| `IStrategyAwardDao.java` | 新增幂等库存快照同步 |
+| `strategy_award_mapper.xml` | 新增 `LEAST` 库存同步 SQL |
+| `StrategyAwardStockDeductCustomer.java` | RabbitMQ 批量消费并聚合库存快照 |
+| `UpdateAwardStockJob.java` | MQ outbox 失败补偿投递 |
 
-### 定时任务新逻辑
+### MQ 批量消费逻辑
 
-```java
-// 1. SPOP 弹出追踪 Set（原子，弹出即消费）
-Set<String> members = redisService.popFromSet(STRATEGY_AWARD_TRACK_SET, 1000);
-// 2. 分组计数: {"100001:101"×5, "100001:102"×2}
-Map<String, Long> countMap = members.stream()
-    .collect(groupingBy(identity(), counting()));
-// 3. 批量 UPDATE
-countMap.forEach((key, count) -> {
-    // "100001:101" → strategyId=100001, awardId=101
-    updateStrategyAwardStock(strategyId, awardId, count);
-});
+```sql
+-- 最多 500 条或等待 1 秒形成一批；同一奖品取最小 surplus。
+UPDATE strategy_award
+SET award_count_surplus = LEAST(award_count_surplus, #{surplus})
+WHERE strategy_id = #{strategyId} AND award_id = #{awardId};
 ```
 
 ---
@@ -101,11 +96,11 @@ countMap.forEach((key, count) -> {
 
 ## 三、效果对比
 
-| | 改造前（奖品） | 改造后（奖品 Lua+Set） | 改造后（活动 drainTo） |
+| | 改造前（奖品） | 改造后（奖品 Lua+MQ） | 改造后（活动 drainTo） |
 |---|---|---|---|
 | decr+锁原子性 | 分离，有并发窗口 | Lua 单线程原子 | 分离（保持不动） |
 | 锁失败回滚 | 无 | INCR 回滚 | 无 |
-| DB 回写 | poll 逐条 UPDATE -1 | SPOP 分组 UPDATE -count | drainTo 聚合 UPDATE -count |
+| DB 回写 | poll 逐条 UPDATE -1 | MQ 聚合后幂等同步库存 | drainTo 聚合 UPDATE -count |
 | 100 次扣减 DB 写入 | 100 次 | 1 次 | 1 次 |
 | Redis 往返 | 3次 (decr+setNx+offer) | 1次 (evalSha) | 2次 (decr+setNx, offer) |
 | 崩溃安全 | decr 后崩溃库存丢失 | 全部成功或全部失败 | decr 后崩溃库存丢失 |
