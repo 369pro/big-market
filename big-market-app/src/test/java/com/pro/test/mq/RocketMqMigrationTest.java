@@ -96,8 +96,9 @@ public class RocketMqMigrationTest {
         ReflectionTestUtils.setField(customer, "raffleStock", stock);
         customer.listener(Arrays.asList(stockMessage(101, 8), stockMessage(101, 9),
                 stockMessage(101, 8), stockMessage(102, 4)));
-        verify(stock).syncStrategyAwardStock(100001L, 101, 8);
-        verify(stock).syncStrategyAwardStock(100001L, 102, 4);
+        verify(stock).syncStrategyAwardStock(argThat(events -> events.size() == 3
+                && events.stream().filter(event -> event.getAwardId() == 101).count() == 2
+                && events.stream().anyMatch(event -> event.getAwardId() == 102 && event.getSurplus() == 4)));
         verifyNoMoreInteractions(stock);
     }
 
@@ -115,7 +116,7 @@ public class RocketMqMigrationTest {
     }
 
     static MessageExt stockMessage(int awardId, int surplus) {
-        return message("{\"id\":\"event\",\"data\":{\"strategyId\":100001,\"awardId\":"
+        return message("{\"id\":\"event-" + awardId + "-" + surplus + "\",\"data\":{\"strategyId\":100001,\"awardId\":"
                 + awardId + ",\"surplus\":" + surplus + "}}");
     }
 
