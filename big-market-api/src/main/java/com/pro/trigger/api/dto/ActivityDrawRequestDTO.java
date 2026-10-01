@@ -22,4 +22,9 @@ public class ActivityDrawRequestDTO implements Serializable {
      */
     private Long activityId;
 
+    /**
+     * 客户端生成的幂等请求ID；同一用户重试同一抽奖时必须保持不变。
+     */
+    private String requestId;
+
 }

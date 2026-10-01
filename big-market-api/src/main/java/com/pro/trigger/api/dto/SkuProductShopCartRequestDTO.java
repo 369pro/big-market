@@ -21,4 +21,9 @@ public class SkuProductShopCartRequestDTO implements Serializable {
      */
     private Long sku;
 
+    /**
+     * 客户端生成的幂等请求ID；同一用户重试同一兑换时必须保持不变。
+     */
+    private String requestId;
+
 }

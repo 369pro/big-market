@@ -30,6 +30,8 @@ public interface IActivityRepository {
 
     boolean subtractionActivitySkuStock(Long sku, String cacheKey, Date endDateTime);
 
+    boolean reserveActivitySkuStock(Long sku, String reservationId, Date endDateTime);
+
     void activitySkuStockConsumeSendQueue(ActivitySkuStockKeyVO activitySkuStockKeyVO);
 
     ActivitySkuStockKeyVO takeQueueValue(Long sku);
@@ -54,6 +56,18 @@ public interface IActivityRepository {
 
     UserRaffleOrderEntity queryNoUsedRaffleOrder(PartakeRaffleActivityEntity partakeRaffleActivityEntity);
 
+    /**
+     * 查询同一用户的幂等抽奖订单，订单状态不参与过滤。
+     */
+    UserRaffleOrderEntity queryRaffleOrderByRequestId(PartakeRaffleActivityEntity partakeRaffleActivityEntity);
+
+    /**
+     * Atomically claims a request-keyed order before strategy execution.
+     *
+     * @return true only when the persisted state changed from create to processing
+     */
+    boolean markRaffleOrderProcessing(UserRaffleOrderEntity userRaffleOrderEntity);
+
     ActivityAccountEntity queryActivityAccountByUserId(String userId, Long activityId);
 
     ActivityAccountMonthEntity queryActivityAccountMonthByUserId(String userId, Long activityId, String month);
@@ -73,6 +87,8 @@ public interface IActivityRepository {
     void updateOrder(DeliveryOrderEntity deliveryOrderEntity);
 
     UnpaidActivityOrderEntity queryUnpaidActivityOrder(SkuRechargeEntity skuRechargeEntity);
+
+    UnpaidActivityOrderEntity queryActivityOrder(SkuRechargeEntity skuRechargeEntity);
 
     List<SkuProductEntity> querySkuProductEntityListByActivityId(Long activityId);
 

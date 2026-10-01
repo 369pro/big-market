@@ -37,7 +37,7 @@
     </select>
 
     <select id="queryRaffleActivityOrder" parameterType="com.pro.infrastructure.dao.po.RaffleActivityOrder" resultMap="dataMap">
-        select user_id, sku, activity_id, activity_name, strategy_id, order_id, order_time, total_count, day_count, month_count, pay_amount, state
+        select user_id, sku, activity_id, activity_name, strategy_id, order_id, order_time, total_count, day_count, month_count, pay_amount, state, out_business_no
         from raffle_activity_order
         where user_id = #{userId} and out_business_no = #{outBusinessNo}
     </select>

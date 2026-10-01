@@ -5,6 +5,7 @@ import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
 import com.netflix.hystrix.contrib.javanica.annotation.HystrixProperty;
 import com.pro.domain.activity.model.entity.*;
 import com.pro.domain.activity.model.valobj.OrderTradeTypeVO;
+import com.pro.domain.activity.model.valobj.UserRaffleOrderStateVO;
 import com.pro.domain.activity.service.IRaffleActivityAccountQuotaService;
 import com.pro.domain.activity.service.IRaffleActivityPartakeService;
 import com.pro.domain.activity.service.IRaffleActivitySkuProductService;
@@ -30,6 +31,10 @@ import com.pro.domain.strategy.service.armory.IStrategyArmory;
 import com.pro.trigger.api.IRaffleActivityService;
 import com.pro.trigger.api.dto.*;
 import com.pro.trigger.api.response.Response;
+import com.pro.trigger.idempotency.RequestIdempotency;
+import com.pro.trigger.idempotency.UserAwardRecordQueryService;
+import com.pro.infrastructure.redis.IRedisService;
+import com.pro.types.common.Constants;
 import com.pro.types.annotations.DCCValue;
 import com.pro.types.annotations.RateLimiterAccessInterceptor;
 import com.pro.types.enums.ResponseCode;
@@ -38,21 +43,21 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.dubbo.config.annotation.DubboService;
+import org.redisson.api.RLock;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
-import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥
@@ -66,7 +71,7 @@ import java.util.List;
 @DubboService(version = "1.0")
 public class RaffleActivityController implements IRaffleActivityService {
 
-    private final SimpleDateFormat dateFormatDay = new SimpleDateFormat("yyyyMMdd");
+    private static final DateTimeFormatter DATE_FORMAT_DAY = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter CALENDAR_MONTH_FORMATTER = DateTimeFormatter.ofPattern("uuuu-MM")
             .withResolverStyle(ResolverStyle.STRICT);
     private static final DateTimeFormatter CALENDAR_MONTH_PREFIX_FORMATTER = DateTimeFormatter.ofPattern("uuuuMM");
@@ -95,6 +100,10 @@ public class RaffleActivityController implements IRaffleActivityService {
     private IAuthService authService;
     @Resource
     private IRaffleActivityStageService raffleActivityStageService;
+    @Resource
+    private IRedisService redisService;
+    @Resource
+    private UserAwardRecordQueryService userAwardRecordQueryService;
 
     // dcc 统一配置中心动态配置降级开关
     @DCCValue("degradeSwitch:close")
@@ -223,12 +232,22 @@ public class RaffleActivityController implements IRaffleActivityService {
     @RequestMapping(value = "draw", method = RequestMethod.POST)
     @Override
     public Response<ActivityDrawResponseDTO> draw(@RequestBody ActivityDrawRequestDTO request) {
+        RLock userDrawLock = null;
         try {
+            if (request == null) {
+                throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), ResponseCode.ILLEGAL_PARAMETER.getInfo());
+            }
             log.info("活动抽奖开始 userId:{} activityId:{}", request.getUserId(), request.getActivityId());
             // 0. 参数校验
             if (StringUtils.isBlank(request.getUserId()) || null == request.getActivityId()) {
                 throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), ResponseCode.ILLEGAL_PARAMETER.getInfo());
             }
+
+            // The watchdog lock serializes the complete user draw workflow so
+            // a concurrent retry cannot consume two strategy-stock units.
+            userDrawLock = redisService.getLock(Constants.RedisKey.ACTIVITY_ACCOUNT_LOCK
+                    + "draw_" + RequestIdempotency.scopeKey(request.getUserId(), "draw"));
+            userDrawLock.lock();
 
             // 1. 降级开关【open 开启、close 关闭】
             if (StringUtils.isNotBlank(degradeSwitch) && "open".equals(degradeSwitch)) {
@@ -244,8 +263,47 @@ public class RaffleActivityController implements IRaffleActivityService {
             }
 
             // 3. 参与活动 - 创建抽奖记录订单
-            UserRaffleOrderEntity orderEntity = raffleActivityPartakeService.createOrder(request.getUserId(), request.getActivityId());
+            String requestKey = RequestIdempotency.businessKey(request.getUserId(), "draw", request.getRequestId());
+            UserRaffleOrderEntity orderEntity = requestKey == null
+                    ? raffleActivityPartakeService.createOrder(request.getUserId(), request.getActivityId())
+                    : raffleActivityPartakeService.createOrder(request.getUserId(), request.getActivityId(), requestKey);
             log.info("活动抽奖，创建订单 userId:{} activityId:{} orderId:{}", request.getUserId(), request.getActivityId(), orderEntity.getOrderId());
+
+            // A lost response after award persistence must be a pure read.
+            // Never run strategy again for an already-used request-keyed order.
+            if (requestKey != null && UserRaffleOrderStateVO.used.equals(orderEntity.getOrderState())) {
+                UserAwardRecordEntity storedAward = userAwardRecordQueryService
+                        .query(request.getUserId(), orderEntity.getOrderId());
+                if (storedAward == null) {
+                    log.error("抽奖订单已使用但中奖记录不存在 userId:{} orderId:{}", request.getUserId(), orderEntity.getOrderId());
+                    throw new AppException(ResponseCode.UN_ERROR.getCode(), ResponseCode.UN_ERROR.getInfo());
+                }
+                return Response.<ActivityDrawResponseDTO>builder()
+                        .code(ResponseCode.SUCCESS.getCode())
+                        .info(ResponseCode.SUCCESS.getInfo())
+                        .data(ActivityDrawResponseDTO.builder()
+                                .awardId(storedAward.getAwardId())
+                                .awardTitle(storedAward.getAwardTitle())
+                                .build())
+                        .build();
+            }
+
+            if (requestKey != null) {
+                if (UserRaffleOrderStateVO.processing.equals(orderEntity.getOrderState())) {
+                    throw new AppException(ResponseCode.ACTIVITY_ORDER_PROCESSING.getCode(),
+                            ResponseCode.ACTIVITY_ORDER_PROCESSING.getInfo());
+                }
+                if (!UserRaffleOrderStateVO.create.equals(orderEntity.getOrderState())
+                        || !raffleActivityPartakeService.markOrderProcessing(orderEntity)) {
+                    throw new AppException(ResponseCode.ACTIVITY_ORDER_PROCESSING.getCode(),
+                            ResponseCode.ACTIVITY_ORDER_PROCESSING.getInfo());
+                }
+                orderEntity.setOrderState(UserRaffleOrderStateVO.processing);
+            }
+
+            // The processing state is durable before strategy stock is touched. If
+            // the process dies after stock deduction and before award persistence,
+            // retries stop for manual reconciliation instead of rerolling.
 
             // 3.5 查询用户积分（用于权重规则）
             Integer userScore = 0;
@@ -292,17 +350,23 @@ public class RaffleActivityController implements IRaffleActivityService {
                             .build())
                     .build();
         } catch (AppException e) {
-            log.error("活动抽奖失败 userId:{} activityId:{}", request.getUserId(), request.getActivityId(), e);
+            log.error("活动抽奖失败 userId:{} activityId:{}", request == null ? null : request.getUserId(),
+                    request == null ? null : request.getActivityId(), e);
             return Response.<ActivityDrawResponseDTO>builder()
                     .code(e.getCode())
                     .info(e.getInfo())
                     .build();
         } catch (Exception e) {
-            log.error("活动抽奖失败 userId:{} activityId:{}", request.getUserId(), request.getActivityId(), e);
+            log.error("活动抽奖失败 userId:{} activityId:{}", request == null ? null : request.getUserId(),
+                    request == null ? null : request.getActivityId(), e);
             return Response.<ActivityDrawResponseDTO>builder()
                     .code(ResponseCode.UN_ERROR.getCode())
                     .info(ResponseCode.UN_ERROR.getInfo())
                     .build();
+        } finally {
+            if (userDrawLock != null && userDrawLock.isHeldByCurrentThread()) {
+                userDrawLock.unlock();
+            }
         }
     }
 
@@ -372,7 +436,7 @@ public class RaffleActivityController implements IRaffleActivityService {
             BehaviorEntity behaviorEntity = new BehaviorEntity();
             behaviorEntity.setUserId(userId);
             behaviorEntity.setBehaviorTypeVO(BehaviorTypeVO.SIGN);
-            behaviorEntity.setOutBusinessNo(dateFormatDay.format(new Date()));
+            behaviorEntity.setOutBusinessNo(DATE_FORMAT_DAY.format(LocalDate.now()));
             List<String> orderIds = behaviorRebateService.createOrder(behaviorEntity);
             log.info("日历签到返利完成 userId:{} orderIds: {}", userId, JSON.toJSONString(orderIds));
             return Response.<Boolean>builder()
@@ -521,7 +585,7 @@ public class RaffleActivityController implements IRaffleActivityService {
             if (StringUtils.isBlank(userId)) {
                 throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), ResponseCode.ILLEGAL_PARAMETER.getInfo());
             }
-            String outBusinessNo = dateFormatDay.format(new Date());
+            String outBusinessNo = DATE_FORMAT_DAY.format(LocalDate.now());
             List<BehaviorRebateOrderEntity> behaviorRebateOrderEntities = behaviorRebateService.queryOrderByOutBusinessNo(userId, outBusinessNo);
             log.info("查询用户是否完成日历签到返利完成 userId:{} orders.size:{}", userId, behaviorRebateOrderEntities.size());
             return Response.<Boolean>builder()
@@ -748,14 +812,16 @@ public class RaffleActivityController implements IRaffleActivityService {
         try {
             log.info("积分兑换商品开始 userId:{} sku:{}", request.getUserId(), request.getSku());
             // 0. 参数校验
-            if (StringUtils.isBlank(request.getUserId())) {
+            if (StringUtils.isBlank(request.getUserId()) || null == request.getSku()) {
                 throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), ResponseCode.ILLEGAL_PARAMETER.getInfo());
             }
-            // 1. 创建兑换商品sku订单，outBusinessNo 每次创建出一个单号。
+            // 1. requestId is optional for old callers. New callers get one
+            // stable, user/operation-scoped business number across retries.
+            String requestKey = RequestIdempotency.businessKey(request.getUserId(), "credit_exchange", request.getRequestId());
             UnpaidActivityOrderEntity unpaidActivityOrder = raffleActivityAccountQuotaService.createOrder(SkuRechargeEntity.builder()
                     .userId(request.getUserId())
                     .sku(request.getSku())
-                    .outBusinessNo(RandomStringUtils.randomNumeric(12))
+                    .outBusinessNo(requestKey == null ? RandomStringUtils.randomNumeric(12) : requestKey)
                     .orderTradeType(OrderTradeTypeVO.credit_pay_trade)
                     .build());
             log.info("积分兑换商品，创建订单完成 userId:{} sku:{} outBusinessNo:{}", request.getUserId(), request.getSku(), unpaidActivityOrder.getOutBusinessNo());

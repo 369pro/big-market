@@ -15,6 +15,16 @@ import com.pro.infrastructure.redis.IRedisService;
 import org.redisson.api.RBlockingQueue;
 import org.redisson.api.RDelayedQueue;
 import org.redisson.api.RLock;
+import org.redisson.api.RScript;
+import org.redisson.api.RedissonClient;
+import org.redisson.client.codec.StringCodec;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.util.StreamUtils;
+import javax.annotation.PostConstruct;
+import java.io.InputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -45,6 +55,16 @@ public class ActivityRepository implements IActivityRepository {
 
     @Resource
     private IRedisService redisService;
+    @Resource
+    private RedissonClient redissonClient;
+    private String reservationScript;
+
+    @PostConstruct
+    public void loadReservationScript() throws IOException {
+        try (InputStream stream = new ClassPathResource("lua/activity_stock_reserve.lua").getInputStream()) {
+            reservationScript = StreamUtils.copyToString(stream, StandardCharsets.UTF_8);
+        }
+    }
     @Resource
     private IRaffleActivityDao raffleActivityDao;
     @Resource
@@ -182,7 +202,7 @@ public class ActivityRepository implements IActivityRepository {
             raffleActivityAccountDay.setDayCount(createOrderAggregate.getDayCount());
             raffleActivityAccountDay.setDayCountSurplus(createOrderAggregate.getDayCount());
 
-            lock.lock(3, TimeUnit.SECONDS);
+            lock.lock();
             // 以用户ID作为切分键，通过 doRouter 设定路由【这样就保证了下面的操作，都是同一个链接下，也就保证了事务的特性】
             dbRouter.doRouter(createOrderAggregate.getUserId());
             // 编程式事务
@@ -290,8 +310,7 @@ public class ActivityRepository implements IActivityRepository {
 
             // 订单不存在时，记录日志并返回
             if (null == raffleActivityOrderRes) {
-                log.warn("更新订单，订单不存在 userId: {} outBusinessNo: {}", deliveryOrderEntity.getUserId(), deliveryOrderEntity.getOutBusinessNo());
-                return;
+                throw new IllegalStateException("Credit delivery order not found: " + deliveryOrderEntity.getOutBusinessNo());
             }
 
             // 账户对象 - 总
@@ -321,7 +340,7 @@ public class ActivityRepository implements IActivityRepository {
             raffleActivityAccountDay.setDayCount(raffleActivityOrderRes.getDayCount());
             raffleActivityAccountDay.setDayCountSurplus(raffleActivityOrderRes.getDayCount());
 
-            lock.lock(3, TimeUnit.SECONDS);
+            lock.lock();
             dbRouter.doRouter(deliveryOrderEntity.getUserId());
             // 编程式事务
             transactionTemplate.execute(status -> {
@@ -361,8 +380,22 @@ public class ActivityRepository implements IActivityRepository {
 
     @Override
     public void cacheActivitySkuStockCount(String cacheKey, Integer stockCount) {
-        if (redisService.isExists(cacheKey)) return;
-        redisService.setAtomicLong(cacheKey, stockCount);
+        redissonClient.getBucket(cacheKey, StringCodec.INSTANCE).trySet(String.valueOf(stockCount));
+    }
+
+    @Override
+    public boolean reserveActivitySkuStock(Long sku, String reservationId, Date endDateTime) {
+        String stockKey = Constants.RedisKey.ACTIVITY_SKU_STOCK_COUNT_KEY + sku;
+        long retention = Math.max(TimeUnit.DAYS.toMillis(1),
+                endDateTime.getTime() - System.currentTimeMillis() + TimeUnit.DAYS.toMillis(7));
+        Long result = redissonClient.getScript(StringCodec.INSTANCE).eval(RScript.Mode.READ_WRITE,
+                reservationScript, RScript.ReturnType.INTEGER,
+                Arrays.asList(stockKey, "activity:stock:reservation:" + reservationId),
+                String.valueOf(sku), String.valueOf(retention));
+        if (result == -2L) {
+            throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), "Business key already used for another SKU");
+        }
+        return result == 1L;
     }
 
     @Override
@@ -422,12 +455,17 @@ public class ActivityRepository implements IActivityRepository {
 
     @Override
     public void updateActivitySkuStock(Long sku) {
-        raffleActivitySkuDao.updateActivitySkuStock(sku);
+        String key = Constants.RedisKey.ACTIVITY_SKU_STOCK_COUNT_KEY + sku;
+        String value = redissonClient.<String>getBucket(key, StringCodec.INSTANCE).get();
+        if (value == null) return; // An uninitialized cache must not zero the database.
+        long remaining = Long.parseLong(value);
+        if (remaining < 0 || remaining > Integer.MAX_VALUE) throw new IllegalStateException("Invalid SKU stock");
+        raffleActivitySkuDao.syncActivitySkuStock(sku, (int) remaining);
     }
 
     @Override
     public void updateActivitySkuStock(Long sku, int count) {
-        raffleActivitySkuDao.updateActivitySkuStockBatch(sku, count);
+        updateActivitySkuStock(sku);
     }
 
     @Override
@@ -455,9 +493,39 @@ public class ActivityRepository implements IActivityRepository {
         userRaffleOrderEntity.setActivityName(userRaffleOrderRes.getActivityName());
         userRaffleOrderEntity.setStrategyId(userRaffleOrderRes.getStrategyId());
         userRaffleOrderEntity.setOrderId(userRaffleOrderRes.getOrderId());
+        userRaffleOrderEntity.setRequestId(userRaffleOrderRes.getRequestId());
         userRaffleOrderEntity.setOrderTime(userRaffleOrderRes.getOrderTime());
         userRaffleOrderEntity.setOrderState(UserRaffleOrderStateVO.valueOf(userRaffleOrderRes.getOrderState()));
         return userRaffleOrderEntity;
+    }
+
+    @Override
+    public UserRaffleOrderEntity queryRaffleOrderByRequestId(PartakeRaffleActivityEntity partakeRaffleActivityEntity) {
+        UserRaffleOrder request = UserRaffleOrder.builder()
+                .userId(partakeRaffleActivityEntity.getUserId())
+                .requestId(partakeRaffleActivityEntity.getRequestId())
+                .build();
+        UserRaffleOrder result = userRaffleOrderDao.queryRaffleOrderByRequestId(request);
+        if (result == null) return null;
+        return UserRaffleOrderEntity.builder()
+                .userId(result.getUserId())
+                .activityId(result.getActivityId())
+                .activityName(result.getActivityName())
+                .strategyId(result.getStrategyId())
+                .orderId(result.getOrderId())
+                .requestId(result.getRequestId())
+                .orderTime(result.getOrderTime())
+                .orderState(UserRaffleOrderStateVO.valueOf(result.getOrderState()))
+                .build();
+    }
+
+    @Override
+    public boolean markRaffleOrderProcessing(UserRaffleOrderEntity userRaffleOrderEntity) {
+        UserRaffleOrder request = UserRaffleOrder.builder()
+                .userId(userRaffleOrderEntity.getUserId())
+                .orderId(userRaffleOrderEntity.getOrderId())
+                .build();
+        return userRaffleOrderDao.updateUserRaffleOrderStateProcessing(request) == 1;
     }
 
     @Override
@@ -614,6 +682,7 @@ public class ActivityRepository implements IActivityRepository {
                             .activityName(userRaffleOrderEntity.getActivityName())
                             .strategyId(userRaffleOrderEntity.getStrategyId())
                             .orderId(userRaffleOrderEntity.getOrderId())
+                            .requestId(userRaffleOrderEntity.getRequestId())
                             .orderTime(userRaffleOrderEntity.getOrderTime())
                             .orderState(userRaffleOrderEntity.getOrderState().getCode())
                             .build());
@@ -741,6 +810,20 @@ public class ActivityRepository implements IActivityRepository {
                 .outBusinessNo(raffleActivityOrderRes.getOutBusinessNo())
                 .payAmount(raffleActivityOrderRes.getPayAmount())
                 .build();
+    }
+
+    @Override
+    public UnpaidActivityOrderEntity queryActivityOrder(SkuRechargeEntity request) {
+        RaffleActivityOrder query = new RaffleActivityOrder();
+        query.setUserId(request.getUserId());
+        query.setOutBusinessNo(request.getOutBusinessNo());
+        RaffleActivityOrder order = raffleActivityOrderDao.queryRaffleActivityOrder(query);
+        if (order == null) return null;
+        if (!request.getSku().equals(order.getSku())) {
+            throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), "Business key already used for another SKU");
+        }
+        return UnpaidActivityOrderEntity.builder().userId(order.getUserId()).orderId(order.getOrderId())
+                .outBusinessNo(order.getOutBusinessNo()).payAmount(order.getPayAmount()).build();
     }
 
     @Override

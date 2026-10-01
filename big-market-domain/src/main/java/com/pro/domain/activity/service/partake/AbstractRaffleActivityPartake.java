@@ -11,6 +11,7 @@ import com.pro.domain.activity.service.IRaffleActivityPartakeService;
 import com.pro.types.enums.ResponseCode;
 import com.pro.types.exception.AppException;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.Date;
 
@@ -36,6 +37,20 @@ public abstract class AbstractRaffleActivityPartake implements IRaffleActivityPa
                 .build());
     }
 
+    @Override
+    public UserRaffleOrderEntity createOrder(String userId, Long activityId, String requestId) {
+        return createOrder(PartakeRaffleActivityEntity.builder()
+                .userId(userId)
+                .activityId(activityId)
+                .requestId(requestId)
+                .build());
+    }
+
+    @Override
+    public boolean markOrderProcessing(UserRaffleOrderEntity userRaffleOrderEntity) {
+        return activityRepository.markRaffleOrderProcessing(userRaffleOrderEntity);
+    }
+
     /**
      * @param partakeRaffleActivityEntity 参与抽奖活动实体对象
      * @return 抽奖订单 实体
@@ -47,6 +62,21 @@ public abstract class AbstractRaffleActivityPartake implements IRaffleActivityPa
         Long activityId = partakeRaffleActivityEntity.getActivityId();
         Date currentDate = new Date();
         log.info("创建活动抽奖单开始 userId:{} activityId:{}", userId, activityId);
+
+        // A request-keyed order must be recovered before activity status/date
+        // checks; a delayed network retry must still return its original order.
+        if (StringUtils.isNotBlank(partakeRaffleActivityEntity.getRequestId())) {
+            UserRaffleOrderEntity requestOrder = activityRepository
+                    .queryRaffleOrderByRequestId(partakeRaffleActivityEntity);
+            if (requestOrder != null) {
+                if (!activityId.equals(requestOrder.getActivityId())) {
+                    throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(),
+                            ResponseCode.ILLEGAL_PARAMETER.getInfo());
+                }
+                return requestOrder;
+            }
+        }
+
         // 1. 活动查询
         ActivityEntity activityEntity = activityRepository.queryRaffleActivityByActivityId(activityId);
 
@@ -61,11 +91,16 @@ public abstract class AbstractRaffleActivityPartake implements IRaffleActivityPa
             throw new AppException(ResponseCode.ACTIVITY_DATE_ERROR.getCode(), ResponseCode.ACTIVITY_DATE_ERROR.getInfo());
         }
 
-        // note 2. 查询未被使用的活动 抽奖订单记录
-        UserRaffleOrderEntity userRaffleOrderEntity = activityRepository.queryNoUsedRaffleOrder(partakeRaffleActivityEntity);
-        if (null != userRaffleOrderEntity) {
-            log.info("创建参与活动订单存在 userId:{} activityId:{} userRaffleOrderEntity:{}", userId, activityId, JSON.toJSONString(userRaffleOrderEntity));
-            return userRaffleOrderEntity;
+        // Legacy callers retain the old unused-order reuse behavior. A
+        // request-keyed call must create its own durable mapping instead of
+        // accidentally inheriting an unrelated legacy order.
+        UserRaffleOrderEntity userRaffleOrderEntity = null;
+        if (StringUtils.isBlank(partakeRaffleActivityEntity.getRequestId())) {
+            userRaffleOrderEntity = activityRepository.queryNoUsedRaffleOrder(partakeRaffleActivityEntity);
+            if (null != userRaffleOrderEntity) {
+                log.info("创建参与活动订单存在 userId:{} activityId:{} userRaffleOrderEntity:{}", userId, activityId, JSON.toJSONString(userRaffleOrderEntity));
+                return userRaffleOrderEntity;
+            }
         }
 
         // 3. 额度账户过滤&返回账户构建对象【创建日月账户额度】
@@ -73,6 +108,7 @@ public abstract class AbstractRaffleActivityPartake implements IRaffleActivityPa
 
         // 4. 构建订单
         UserRaffleOrderEntity userRaffleOrder = this.buildUserRaffleOrder(userId, activityId, currentDate);
+        userRaffleOrder.setRequestId(partakeRaffleActivityEntity.getRequestId());
 
         // 5. 填充抽奖单实体对象
         createPartakeOrderAggregate.setUserRaffleOrderEntity(userRaffleOrder);

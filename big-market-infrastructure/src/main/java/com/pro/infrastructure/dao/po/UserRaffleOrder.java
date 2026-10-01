@@ -29,9 +29,11 @@ public class UserRaffleOrder {
     private Long strategyId;
     /** 订单ID */
     private String orderId;
+    /** 幂等请求ID；旧订单为空 */
+    private String requestId;
     /** 下单时间 */
     private Date orderTime;
-    /** 订单状态；create-创建、used-已使用、cancel-已作废 */
+    /** 订单状态；create-创建、processing-处理中、used-已使用、cancel-已作废 */
     private String orderState;
     /** 创建时间 */
     private Date createTime;

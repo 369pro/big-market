@@ -18,6 +18,8 @@ public interface IRaffleActivitySkuDao {
 
     void updateActivitySkuStock(Long sku);
 
+    int syncActivitySkuStock(@Param("sku") Long sku, @Param("remaining") int remaining);
+
     void clearActivitySkuStock(Long sku);
 
     /**

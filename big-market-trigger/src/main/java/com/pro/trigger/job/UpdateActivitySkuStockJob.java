@@ -41,27 +41,23 @@ public class UpdateActivitySkuStockJob {
         RLock lock = redissonClient.getLock("big-market-UpdateActivitySkuStockJob");
         boolean isLocked = false;
         try {
-            isLocked = lock.tryLock(3, 0, TimeUnit.SECONDS);
+            isLocked = lock.tryLock(3, TimeUnit.SECONDS);
             if (!isLocked) return;
             // log.info("定时任务，更新活动sku库存【延迟队列获取，降低对数据库的更新频次，不要产生竞争】");
             List<Long> skuList = raffleActivitySkuDao.querySkuList();
             for(Long sku : skuList){
-                executor.execute(()->{
                     try {
-                        // drainTo 排空队列，聚合扣减数量，一次 UPDATE -count 替代多次 UPDATE -1
-                        int count = skuStock.takeQueueValues(sku);
-                        if (count <= 0) return;
-                        log.info("UpdateActivitySkuStockJob，批量更新活动sku库存 sku:{} count:{}", sku, count);
-                        skuStock.updateActivitySkuStock(sku, count);
+                        // Absolute monotonic snapshots are safe to retry after SQL failure or lost acknowledgement.
+                        skuStock.updateActivitySkuStock(sku);
+                        skuStock.takeQueueValues(sku); // Drain legacy notifications only after a successful sync.
                     } catch (Exception e) {
                         log.error("定时任务，批量更新活动sku库存失败 sku: {}", sku, e);
                     }
-                });
             }
         }catch (Exception e) {
             log.error("UpdateActivitySkuStockJob，更新活动sku库存失败", e);
         }finally {
-            if (isLocked) {
+            if (isLocked && lock.isHeldByCurrentThread()) {
                 lock.unlock();
             }
         }

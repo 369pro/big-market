@@ -27,4 +27,14 @@ public interface IRaffleActivityPartakeService {
      * @return 用户抽奖订单实体对象
      */
     UserRaffleOrderEntity createOrder(String userId, Long activityId);
+
+    /**
+     * 创建或恢复带幂等请求ID的抽奖单。requestId 为空时保留旧行为。
+     */
+    UserRaffleOrderEntity createOrder(String userId, Long activityId, String requestId);
+
+    /**
+     * Claims a keyed order before running the raffle strategy.
+     */
+    boolean markOrderProcessing(UserRaffleOrderEntity userRaffleOrderEntity);
 }

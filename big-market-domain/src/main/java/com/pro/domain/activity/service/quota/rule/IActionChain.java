@@ -14,4 +14,8 @@ public interface IActionChain extends IActionChainArmory {
 
     boolean action(ActivitySkuEntity activitySkuEntity, ActivityEntity activityEntity, ActivityCountEntity activityCountEntity);
 
+    default boolean action(ActivitySkuEntity sku, ActivityEntity activity, ActivityCountEntity count, String reservationId) {
+        return action(sku, activity, count);
+    }
+
 }

@@ -13,6 +13,7 @@ import lombok.Getter;
 public enum UserRaffleOrderStateVO {
 
     create("create", "创建"),
+    processing("processing", "处理中"),
     used("used", "已使用"),
     cancel("cancel", "已作废"),
     ;

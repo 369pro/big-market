@@ -38,6 +38,12 @@
         where sku = #{sku}
     </update>
 
+    <update id="syncActivitySkuStock">
+        update raffle_activity_sku
+        set stock_count_surplus = #{remaining}, update_time = now()
+        where sku = #{sku} and stock_count_surplus > #{remaining}
+    </update>
+
     <select id="queryActivitySkuListByActivityId" parameterType="java.lang.Long" resultMap="dataMap">
         select sku, activity_count_id, stock_count, stock_count_surplus, product_amount
         from raffle_activity_sku

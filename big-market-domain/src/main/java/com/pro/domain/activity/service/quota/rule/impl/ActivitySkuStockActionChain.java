@@ -27,6 +27,15 @@ public class ActivitySkuStockActionChain extends AbstractActionChain {
     @Resource
     private IActivityRepository activityRepository;
 
+    @Override
+    public boolean action(ActivitySkuEntity sku, ActivityEntity activity, ActivityCountEntity count, String reservationId) {
+        if (reservationId == null) return action(sku, activity, count);
+        if (!activityRepository.reserveActivitySkuStock(sku.getSku(), reservationId, activity.getEndDateTime())) {
+            throw new AppException(ResponseCode.ACTIVITY_SKU_STOCK_ERROR.getCode(), ResponseCode.ACTIVITY_SKU_STOCK_ERROR.getInfo());
+        }
+        return true;
+    }
+
     /**
      * 用户参与签到，就可以领取活动（需要扣减活动库存），之后通过活动抽奖
      */

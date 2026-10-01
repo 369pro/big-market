@@ -26,4 +26,9 @@ public class PartakeRaffleActivityEntity {
      */
     private Long activityId;
 
+    /**
+     * 已经过用户及操作命名空间处理的幂等请求ID。
+     */
+    private String requestId;
+
 }

@@ -23,6 +23,11 @@ public class ActivityBaseActionChain extends AbstractActionChain {
 
     @Override
     public boolean action(ActivitySkuEntity activitySkuEntity, ActivityEntity activityEntity, ActivityCountEntity activityCountEntity) {
+        return action(activitySkuEntity, activityEntity, activityCountEntity, null);
+    }
+
+    @Override
+    public boolean action(ActivitySkuEntity activitySkuEntity, ActivityEntity activityEntity, ActivityCountEntity activityCountEntity, String reservationId) {
         log.info("活动责任链-基础信息【有效期、状态、库存(sku)】校验开始。sku:{} activityId:{}", activitySkuEntity.getSku(), activityEntity.getActivityId());
         // 校验；活动状态
         if (!ActivityStateVO.open.equals(activityEntity.getState())) {
@@ -34,10 +39,10 @@ public class ActivityBaseActionChain extends AbstractActionChain {
             throw new AppException(ResponseCode.ACTIVITY_DATE_ERROR.getCode(), ResponseCode.ACTIVITY_DATE_ERROR.getInfo());
         }
         // 校验；活动sku库存 「剩余库存从缓存获取的」
-        if (activitySkuEntity.getStockCountSurplus() <= 0) {
+        if (reservationId == null && activitySkuEntity.getStockCountSurplus() <= 0) {
             throw new AppException(ResponseCode.ACTIVITY_SKU_STOCK_ERROR.getCode(), ResponseCode.ACTIVITY_SKU_STOCK_ERROR.getInfo());
         }
-        return next().action(activitySkuEntity, activityEntity, activityCountEntity);
+        return next().action(activitySkuEntity, activityEntity, activityCountEntity, reservationId);
     }
 
 }
