@@ -21,4 +21,9 @@
         )
     </insert>
 
+    <select id="queryByBusinessNo" resultMap="dataMap">
+        select user_id, order_id, trade_name, trade_type, trade_amount, out_business_no
+        from user_credit_order
+        where user_id = #{userId} and out_business_no = #{outBusinessNo}
+    </select>
 </mapper>

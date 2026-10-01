@@ -16,4 +16,6 @@ public interface IUserCreditOrderDao {
 
     void insert(UserCreditOrder userCreditOrderReq);
 
+    UserCreditOrder queryByBusinessNo(UserCreditOrder request);
+
 }

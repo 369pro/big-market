@@ -37,6 +37,11 @@ public class CreditAdjustSuccessCustomer {
             BaseEvent.EventMessage<CreditAdjustSuccessMessageEvent.CreditAdjustSuccessMessage> eventMessage = JSON.parseObject(message, new TypeReference<BaseEvent.EventMessage<CreditAdjustSuccessMessageEvent.CreditAdjustSuccessMessage>>() {
             }.getType());
             CreditAdjustSuccessMessageEvent.CreditAdjustSuccessMessage creditAdjustSuccessMessage = eventMessage.getData();
+            if (creditAdjustSuccessMessage == null || creditAdjustSuccessMessage.getAmount() == null) {
+                throw new IllegalArgumentException("Missing credit adjustment payload");
+            }
+            // Positive rebate/award credits are not payments for an activity order.
+            if (creditAdjustSuccessMessage.getAmount().signum() >= 0) return;
 
             // 积分发货
             DeliveryOrderEntity deliveryOrderEntity = new DeliveryOrderEntity();
@@ -44,10 +49,7 @@ public class CreditAdjustSuccessCustomer {
             deliveryOrderEntity.setOutBusinessNo(creditAdjustSuccessMessage.getOutBusinessNo());
             raffleActivityAccountQuotaService.updateOrder(deliveryOrderEntity);
         } catch (AppException e) {
-            if (ResponseCode.INDEX_DUP.getCode().equals(e.getCode())) {
-                log.warn("监听积分账户调整成功消息，进行交易商品发货，消费重复 topic: {} message: {}", topic, message, e);
-                return;
-            }
+            // An unchanged completed order already returns normally; other conflicts require retry.
             throw e;
         } catch (Exception e) {
             log.error("监听积分账户调整成功消息，进行交易商品发货失败 topic: {} message: {}", topic, message, e);

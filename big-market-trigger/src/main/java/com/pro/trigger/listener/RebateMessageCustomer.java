@@ -49,13 +49,12 @@ public class RebateMessageCustomer {
             BaseEvent.EventMessage<SendRebateMessageEvent.RebateMessage> eventMessage =
                     JSON.parseObject(message, new TypeReference<BaseEvent.EventMessage<SendRebateMessageEvent.RebateMessage>>() {}.getType());
             SendRebateMessageEvent.RebateMessage rebateMessage = eventMessage.getData();
+            if (rebateMessage == null || rebateMessage.getUserId() == null || "null".equals(rebateMessage.getUserId())
+                    || rebateMessage.getBizId() == null || rebateMessage.getBizId().trim().isEmpty()) {
+                throw new IllegalArgumentException("Invalid rebate message identity");
+            }
             switch (rebateMessage.getRebateType()){
                 case "sku":
-                    // 防御：userId 为真实 null 或字符串 "null" 时直接丢弃（发送方未正确赋值）
-                    if (rebateMessage.getUserId() == null || "null".equals(rebateMessage.getUserId())) {
-                        log.warn("监听用户行为返利消息，userId 为空，丢弃消息 topic: {} message: {}", topic, message);
-                        return;
-                    }
                     SkuRechargeEntity skuRechargeEntity = new SkuRechargeEntity();
                     skuRechargeEntity.setSku(Long.valueOf(rebateMessage.getRebateConfig()));
                     skuRechargeEntity.setUserId(rebateMessage.getUserId());
@@ -72,17 +71,11 @@ public class RebateMessageCustomer {
                             .outBusinessNo(rebateMessage.getBizId()).build();
                     creditAdjustService.createOrder(tradeEntity);
                     break;
+                default:
+                    throw new IllegalArgumentException("Unsupported rebate type: " + rebateMessage.getRebateType());
             }
         } catch (AppException e) {
-            if (ResponseCode.INDEX_DUP.getCode().equals(e.getCode())) {
-                log.warn("监听用户行为返利消息，消费重复 topic: {} message: {}", topic, message, e);
-                return;
-            }
-            // SKU 库存不足时，记录警告并丢弃消息，避免 MQ 无限重试
-            if (ResponseCode.ACTIVITY_SKU_STOCK_ERROR.getCode().equals(e.getCode())) {
-                log.warn("监听用户行为返利消息，SKU库存不足，丢弃消息 topic: {} message: {}", topic, message);
-                return;
-            }
+            // Services return normally only for verified duplicates; failed grants must be retried.
             throw e;
         }catch (Exception e) {
             log.error("监听用户行为返利发送消息，消费失败 topic: {} message: {}", topic, message);

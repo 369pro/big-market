@@ -16,7 +16,8 @@
         update user_credit_account set
         total_amount = total_amount + #{totalAmount},
         available_amount = available_amount + #{availableAmount}
-        where user_id = #{userId}
+        where user_id = #{userId} and account_status = 'open'
+          and available_amount + #{availableAmount} >= 0
     </update>
 
     <insert id="insert" parameterType="com.pro.infrastructure.dao.po.UserAwardRecord">

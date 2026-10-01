@@ -1,5 +1,6 @@
 package com.pro.infrastructure.adapter.repository;
 
+import java.math.BigDecimal;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Resource;
@@ -25,6 +26,8 @@ import com.pro.infrastructure.dao.po.UserCreditOrder;
 import com.pro.infrastructure.event.EventPublisher;
 import com.pro.infrastructure.redis.IRedisService;
 import com.pro.types.common.Constants;
+import com.pro.types.enums.ResponseCode;
+import com.pro.types.exception.AppException;
 
 import cn.bugstack.middleware.db.router.strategy.IDBRouterStrategy;
 import lombok.extern.slf4j.Slf4j;
@@ -87,29 +90,45 @@ public class CreditRepository implements ICreditRepository {
         task.setMessage(JSON.toJSONString(taskEntity.getMessage()));
         task.setState(taskEntity.getState().getCode());
 
-        RLock lock = redisService.getLock(Constants.RedisKey.USER_CREDIT_ACCOUNT_LOCK + userId +
-                Constants.UNDERLINE + creditOrderEntity.getOutBusinessNo());
+        RLock lock = redisService.getLock(Constants.RedisKey.USER_CREDIT_ACCOUNT_LOCK + userId);
         try{
-            lock.lock(3, TimeUnit.SECONDS);
+            lock.lock();
             dbRouter.doRouter(userId);
+            UserCreditOrder existing = userCreditOrderDao.queryByBusinessNo(userCreditOrderReq);
+            if (existing != null) {
+                if (!existing.getTradeType().equals(userCreditOrderReq.getTradeType())
+                        || !existing.getTradeName().equals(userCreditOrderReq.getTradeName())
+                        || existing.getTradeAmount().compareTo(userCreditOrderReq.getTradeAmount()) != 0) {
+                    throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), "Business key reused with a different credit trade");
+                }
+                creditOrderEntity.setOrderId(existing.getOrderId());
+                return;
+            }
             transactionTemplate.execute(status -> {
                 try{
+                    // The unique ledger entry and balance change commit or roll back together.
+                    userCreditOrderDao.insert(userCreditOrderReq);
                     UserCreditAccount userCreditAccount = userCreditAccountDao.queryUserCreditAccount(userCreditAccountReq);
                     if (null == userCreditAccount) {
+                        if (userCreditAccountReq.getAvailableAmount().signum() < 0) {
+                            throw new AppException(ResponseCode.USER_CREDIT_ACCOUNT_NO_AVAILABLE_AMOUNT.getCode(), "Insufficient credit");
+                        }
                         userCreditAccountDao.insert(userCreditAccountReq);
                     } else {
-                        userCreditAccountDao.updateAddAmount(userCreditAccountReq);
+                        if (userCreditAccountDao.updateAddAmount(userCreditAccountReq) != 1) {
+                            throw new AppException(ResponseCode.USER_CREDIT_ACCOUNT_NO_AVAILABLE_AMOUNT.getCode(), "Insufficient credit or account closed");
+                        }
                     }
-                    // 2. 保存账户订单
-                    userCreditOrderDao.insert(userCreditOrderReq);
                     // 3. 写入任务
                     taskDao.insert(task);
                 }catch (DuplicateKeyException e) {
                     status.setRollbackOnly();
                     log.error("调整账户积分额度异常，唯一索引冲突 userId:{} orderId:{}", userId, creditOrderEntity.getOrderId(), e);
+                    throw e; // Only an exact ledger match above is a successful duplicate.
                 } catch (Exception e) {
                     status.setRollbackOnly();
                     log.error("调整账户积分额度失败 userId:{} orderId:{}", userId, creditOrderEntity.getOrderId(), e);
+                    throw e;
                 }
                 return 1;
             });
@@ -139,7 +158,8 @@ public class CreditRepository implements ICreditRepository {
         try {
             dbRouter.doRouter(userId);
             UserCreditAccount userCreditAccount = userCreditAccountDao.queryUserCreditAccount(userCreditAccountReq);
-            return CreditAccountEntity.builder().userId(userId).adjustAmount(userCreditAccount.getAvailableAmount()).build();
+            return CreditAccountEntity.builder().userId(userId)
+                    .adjustAmount(userCreditAccount == null ? BigDecimal.ZERO : userCreditAccount.getAvailableAmount()).build();
         } finally {
             dbRouter.clear();
         }

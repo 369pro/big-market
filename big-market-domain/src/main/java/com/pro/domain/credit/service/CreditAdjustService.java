@@ -35,13 +35,12 @@ public class CreditAdjustService implements ICreditAdjustService{
 //                .userId(tradeEntity.getUserId())
 //                .adjustAmount(tradeEntity.getAmount()).build();
         log.info("增加账户积分额度开始 userId:{} tradeName:{} amount:{}", tradeEntity.getUserId(), tradeEntity.getTradeName(), tradeEntity.getAmount());
-        // 0. 判断处理，逆向交易，扣减积分，需要查询账户是否存在以及积分额度是否充足
-        if (TradeTypeVO.REVERSE.equals(tradeEntity.getTradeType())) {
-            CreditAccountEntity creditAccountEntity = creditRepository.queryUserCreditAccount(tradeEntity.getUserId());
-            if (null == creditAccountEntity || creditAccountEntity.getAdjustAmount().compareTo(tradeEntity.getAmount()) < 0) {
-                throw new AppException(ResponseCode.USER_CREDIT_ACCOUNT_NO_AVAILABLE_AMOUNT.getCode(), ResponseCode.USER_CREDIT_ACCOUNT_NO_AVAILABLE_AMOUNT.getInfo());
-            }
+        if (tradeEntity.getAmount() == null || tradeEntity.getTradeType() == null
+                || (TradeTypeVO.REVERSE.equals(tradeEntity.getTradeType()) && tradeEntity.getAmount().signum() >= 0)
+                || (TradeTypeVO.FORWARD.equals(tradeEntity.getTradeType()) && tradeEntity.getAmount().signum() <= 0)) {
+            throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), "Invalid credit trade amount");
         }
+        // Balance sufficiency is checked atomically in the database, after duplicate detection.
         // 1. 创建账户积分实体
         CreditAccountEntity creditAccountEntity = TradeAggregate.createCreditAccountEntity(
                 tradeEntity.getUserId(),

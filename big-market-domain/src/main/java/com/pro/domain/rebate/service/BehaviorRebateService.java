@@ -2,6 +2,10 @@ package com.pro.domain.rebate.service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import com.pro.types.enums.ResponseCode;
+import com.pro.types.exception.AppException;
+import org.apache.commons.codec.digest.DigestUtils;
 
 import javax.annotation.Resource;
 
@@ -28,6 +32,14 @@ public class BehaviorRebateService implements IBehaviorRebateService{
 
     @Override
     public List<String> createOrder(BehaviorEntity behaviorEntity) {
+        if (behaviorEntity == null || behaviorEntity.getBehaviorTypeVO() == null
+                || org.apache.commons.lang3.StringUtils.isBlank(behaviorEntity.getUserId())
+                || "null".equals(behaviorEntity.getUserId())
+                || org.apache.commons.lang3.StringUtils.isBlank(behaviorEntity.getOutBusinessNo())) {
+            throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), "Invalid rebate business key");
+        }
+        List<String> previous = previousOrders(behaviorEntity);
+        if (!previous.isEmpty()) return previous;
         // 1. 查询返利配置
         List<DailyBehaviorRebateVO> dailyBehaviorRebates = behaviorRebateRepository.
                 queryDailyBehaviorRebateByBehaviorType(behaviorEntity.getBehaviorTypeVO().getCode().toLowerCase());
@@ -53,8 +65,7 @@ public class BehaviorRebateService implements IBehaviorRebateService{
 
             // 构建 behaviorRebateOrderEntity 对象
             // 拼装业务ID；用户ID_返利类型_外部透彻业务ID
-            String bizId = behaviorEntity.getUserId() + Constants.UNDERLINE + dailyBehaviorRebateVO.getRebateType()
-                    + Constants.UNDERLINE + behaviorEntity.getOutBusinessNo();
+            String bizId = sendRebateMessage.getBizId();
             BehaviorRebateOrderEntity behaviorRebateOrderEntity = BehaviorRebateOrderEntity.builder()
                     .userId(behaviorEntity.getUserId())
                     .orderId(RandomStringUtils.randomNumeric(12))
@@ -76,7 +87,14 @@ public class BehaviorRebateService implements IBehaviorRebateService{
             behaviorRebateAggregates.add(behaviorRebateAggregate);
         }
 
-        behaviorRebateRepository.saveUserRebateRecord(behaviorEntity.getUserId(), behaviorRebateAggregates);
+        try {
+            behaviorRebateRepository.saveUserRebateRecord(behaviorEntity.getUserId(), behaviorRebateAggregates);
+        } catch (AppException e) {
+            if (!ResponseCode.INDEX_DUP.getCode().equals(e.getCode())) throw e;
+            previous = previousOrders(behaviorEntity);
+            if (previous.isEmpty()) throw e;
+            return previous;
+        }
         // 4. 返回订单ID集合
         return orderIds;
     }
@@ -92,7 +110,10 @@ public class BehaviorRebateService implements IBehaviorRebateService{
         sendRebateMessage.setRebateDesc(dailyBehaviorRebateVO.getRebateDesc());
         sendRebateMessage.setRebateType(dailyBehaviorRebateVO.getRebateType());
         sendRebateMessage.setRebateConfig(dailyBehaviorRebateVO.getRebateConfig());
-        sendRebateMessage.setBizId(behaviorEntity.getOutBusinessNo());
+        // Bound the downstream varchar(64) key and namespace different business operations.
+        sendRebateMessage.setBizId(DigestUtils.sha256Hex(behaviorEntity.getUserId() + "\0"
+                + behaviorEntity.getBehaviorTypeVO().getCode() + "\0"
+                + dailyBehaviorRebateVO.getRebateType() + "\0" + behaviorEntity.getOutBusinessNo()));
         return sendRebateMessage;
     }
 
@@ -100,8 +121,15 @@ public class BehaviorRebateService implements IBehaviorRebateService{
     public List<BehaviorRebateOrderEntity> queryOrderByOutBusinessNo(String userId, String outBusinessNo) {
         return behaviorRebateRepository.queryOrderByOutBusinessNo(userId, outBusinessNo);
     }
+
     @Override
     public List<String> querySignOutBusinessNoByMonth(String userId, String monthPrefix) {
         return behaviorRebateRepository.querySignOutBusinessNoByMonth(userId, monthPrefix);
+    }
+
+    private List<String> previousOrders(BehaviorEntity behavior) {
+        return behaviorRebateRepository.queryOrderByOutBusinessNo(behavior.getUserId(), behavior.getOutBusinessNo())
+                .stream().filter(order -> behavior.getBehaviorTypeVO().getCode().equalsIgnoreCase(order.getBehaviorType()))
+                .map(BehaviorRebateOrderEntity::getOrderId).collect(Collectors.toList());
     }
 }
