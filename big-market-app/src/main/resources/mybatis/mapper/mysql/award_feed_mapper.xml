@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pro.infrastructure.dao.IAwardFeedDao">
+    <select id="queryRecentAwards" resultType="com.pro.infrastructure.dao.po.UserAwardRecord">
+        select user_id as userId, order_id as orderId, award_id as awardId,
+               award_title as awardTitle, award_time as awardTime
+        from user_award_record
+        where activity_id = #{activityId}
+          and award_state in ('create', 'completed', 'complete')
+        order by award_time desc, order_id desc, user_id desc
+        limit #{limit}
+    </select>
+</mapper>
