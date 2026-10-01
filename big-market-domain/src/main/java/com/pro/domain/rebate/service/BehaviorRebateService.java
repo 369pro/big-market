@@ -100,4 +100,8 @@ public class BehaviorRebateService implements IBehaviorRebateService{
     public List<BehaviorRebateOrderEntity> queryOrderByOutBusinessNo(String userId, String outBusinessNo) {
         return behaviorRebateRepository.queryOrderByOutBusinessNo(userId, outBusinessNo);
     }
+    @Override
+    public List<String> querySignOutBusinessNoByMonth(String userId, String monthPrefix) {
+        return behaviorRebateRepository.querySignOutBusinessNoByMonth(userId, monthPrefix);
+    }
 }

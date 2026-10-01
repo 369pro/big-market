@@ -22,4 +22,6 @@ public interface IUserBehaviorRebateOrderDao {
     void insert(UserBehaviorRebateOrder userBehaviorRebateOrder);
 
     List<UserBehaviorRebateOrder> queryOrderByOutBusinessNo(@Param("userId") String userId, @Param("outBusinessNo") String outBusinessNo);
+
+    List<String> querySignOutBusinessNoByMonth(@Param("userId") String userId, @Param("monthPrefix") String monthPrefix);
 }

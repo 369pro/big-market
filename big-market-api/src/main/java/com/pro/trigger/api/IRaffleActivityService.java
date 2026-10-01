@@ -64,6 +64,15 @@ public interface IRaffleActivityService {
     Response<Boolean> calendarSignRebate(String userId);
 
     /**
+     * 查询指定月份已完成的日历签到日期
+     *
+     * @param token 登录Token
+     * @param month 月份，格式 yyyy-MM
+     * @return 已签到日期，格式 yyyy-MM-dd
+     */
+    Response<List<String>> queryCalendarSignRecordsByToken(String token, String month);
+
+    /**
      * 判断是否完成日历签到返利接口
      *
      * @param token token

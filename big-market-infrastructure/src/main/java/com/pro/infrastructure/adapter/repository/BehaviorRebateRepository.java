@@ -141,4 +141,14 @@ public class BehaviorRebateRepository implements IBehaviorRebateRepository {
             dbRouter.clear();
         }
     }
+
+    @Override
+    public List<String> querySignOutBusinessNoByMonth(String userId, String monthPrefix) {
+        try {
+            dbRouter.doRouter(userId);
+            return userBehaviorRebateOrderDao.querySignOutBusinessNoByMonth(userId, monthPrefix);
+        } finally {
+            dbRouter.clear();
+        }
+    }
 }

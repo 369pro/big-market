@@ -30,4 +30,13 @@
         where user_id = #{userId} and out_business_no = #{outBusinessNo}
     </select>
 
+    <select id="querySignOutBusinessNoByMonth" resultType="java.lang.String">
+        select distinct out_business_no
+        from user_behavior_rebate_order
+        where user_id = #{userId}
+          and behavior_type = 'sign'
+          and out_business_no like concat(#{monthPrefix}, '%')
+        order by out_business_no asc
+    </select>
+
 </mapper>

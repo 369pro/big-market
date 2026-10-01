@@ -43,6 +43,13 @@ import org.springframework.web.bind.annotation.*;
 import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -60,6 +67,11 @@ import java.util.List;
 public class RaffleActivityController implements IRaffleActivityService {
 
     private final SimpleDateFormat dateFormatDay = new SimpleDateFormat("yyyyMMdd");
+    private static final DateTimeFormatter CALENDAR_MONTH_FORMATTER = DateTimeFormatter.ofPattern("uuuu-MM")
+            .withResolverStyle(ResolverStyle.STRICT);
+    private static final DateTimeFormatter CALENDAR_MONTH_PREFIX_FORMATTER = DateTimeFormatter.ofPattern("uuuuMM");
+    private static final DateTimeFormatter SIGN_DATE_FORMATTER = DateTimeFormatter.ofPattern("uuuuMMdd")
+            .withResolverStyle(ResolverStyle.STRICT);
 
     @Resource
     private IRaffleActivityPartakeService raffleActivityPartakeService;
@@ -382,6 +394,90 @@ public class RaffleActivityController implements IRaffleActivityService {
                     .data(false)
                     .build();
         }
+    }
+
+    @RequestMapping(value = "query_calendar_sign_records_by_token", method = RequestMethod.POST)
+    @Override
+    public Response<List<String>> queryCalendarSignRecordsByToken(@RequestHeader(value = "Authorization", required = false) String token,
+                                                                   @RequestParam(value = "month", required = false) String month) {
+        try {
+            // 1. Token 校验
+            boolean success = authService.checkToken(token);
+            if (!success) {
+                return Response.<List<String>>builder()
+                        .code(ResponseCode.Login.TOKEN_ERROR.getCode())
+                        .info(ResponseCode.Login.TOKEN_ERROR.getInfo())
+                        .build();
+            }
+
+            // 2. Token 解析
+            String openid = authService.openid(token);
+            if (StringUtils.isBlank(openid)) {
+                return Response.<List<String>>builder()
+                        .code(ResponseCode.Login.TOKEN_ERROR.getCode())
+                        .info(ResponseCode.Login.TOKEN_ERROR.getInfo())
+                        .build();
+            }
+
+            // 3. 月份校验。业务单号使用 yyyyMMdd，因此查询使用同一时区下的 yyyyMM 前缀。
+            YearMonth requestedMonth = parseCalendarMonth(month);
+            String monthPrefix = requestedMonth.format(CALENDAR_MONTH_PREFIX_FORMATTER);
+            List<String> outBusinessNos = behaviorRebateService.querySignOutBusinessNoByMonth(openid, monthPrefix);
+
+            // 4. 一次查询可能返回同一签到日的多条返利记录，转换后去重并排序。
+            List<String> dates = toCalendarSignDates(requestedMonth, outBusinessNos);
+            return Response.<List<String>>builder()
+                    .code(ResponseCode.SUCCESS.getCode())
+                    .info(ResponseCode.SUCCESS.getInfo())
+                    .data(dates)
+                    .build();
+        } catch (AppException e) {
+            log.info("查询日历签到记录参数异常 month:{}", month, e);
+            return Response.<List<String>>builder()
+                    .code(e.getCode())
+                    .info(e.getInfo())
+                    .build();
+        } catch (Exception e) {
+            log.error("查询日历签到记录失败 month:{}", month, e);
+            return Response.<List<String>>builder()
+                    .code(ResponseCode.UN_ERROR.getCode())
+                    .info(ResponseCode.UN_ERROR.getInfo())
+                    .build();
+        }
+    }
+
+    private static YearMonth parseCalendarMonth(String month) {
+        if (StringUtils.isBlank(month) || !month.matches("\\d{4}-(0[1-9]|1[0-2])")) {
+            throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), "month must use yyyy-MM format");
+        }
+        try {
+            return YearMonth.parse(month, CALENDAR_MONTH_FORMATTER);
+        } catch (DateTimeParseException e) {
+            throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), "month must use yyyy-MM format", e);
+        }
+    }
+
+    static List<String> toCalendarSignDates(YearMonth requestedMonth, List<String> outBusinessNos) {
+        Set<String> dates = new TreeSet<>();
+        if (requestedMonth == null || outBusinessNos == null || outBusinessNos.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        String monthPrefix = requestedMonth.format(CALENDAR_MONTH_PREFIX_FORMATTER);
+        for (String outBusinessNo : outBusinessNos) {
+            if (outBusinessNo == null || outBusinessNo.length() != 8 || !outBusinessNo.startsWith(monthPrefix)) {
+                continue;
+            }
+            try {
+                LocalDate date = LocalDate.parse(outBusinessNo, SIGN_DATE_FORMATTER);
+                if (YearMonth.from(date).equals(requestedMonth)) {
+                    dates.add(date.format(DateTimeFormatter.ISO_LOCAL_DATE));
+                }
+            } catch (DateTimeParseException ignored) {
+                // Ignore malformed historical business numbers rather than returning a fake date.
+            }
+        }
+        return new ArrayList<>(dates);
     }
 
     @RequestMapping(value = "is_calendar_sign_rebate_by_token", method = RequestMethod.POST)
