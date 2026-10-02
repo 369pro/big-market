@@ -15,6 +15,9 @@ public interface IAwardDao {
     // @Select("SELECT * FROM award")
     List<Award> queryAwardList();
 
+    /** Read one award definition from the default configuration database. */
+    Award queryAwardByAwardId(Integer awardId);
+
     String queryAwardConfigByAwardId(Integer awardId);
 
     String queryAwardKeyByAwardId(Integer awardId);

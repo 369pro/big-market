@@ -1,6 +1,7 @@
 package com.pro.trigger.http;
 
 import com.alibaba.fastjson.JSON;
+import com.pro.adapter.repository.IActivityDetailQueryRepository;
 import com.pro.adapter.repository.IESUserRaffleOrderRepository;
 import com.pro.domain.activity.model.entity.RaffleActivityStageEntity;
 import com.pro.domain.activity.service.IRaffleActivityStageService;
@@ -8,7 +9,11 @@ import com.pro.domain.activity.service.armory.IActivityArmory;
 import com.pro.model.valobj.ESUserRaffleOrderPageVO;
 import com.pro.model.valobj.ESUserRaffleOrderQueryVO;
 import com.pro.model.valobj.ESUserRaffleOrderVO;
+import com.pro.model.valobj.RaffleActivityDetailQueryVO;
 import com.pro.trigger.api.IErpOperateService;
+import com.pro.trigger.api.dto.RaffleActivityDetailResponseDTO;
+import com.pro.trigger.api.dto.RaffleActivityPrizeResponseDTO;
+import com.pro.trigger.api.dto.RaffleActivitySkuResponseDTO;
 import com.pro.trigger.api.dto.ESUserRaffleOrderPageResponseDTO;
 import com.pro.trigger.api.dto.ESUserRaffleOrderQueryRequestDTO;
 import com.pro.trigger.api.dto.ESUserRaffleOrderResponseDTO;
@@ -39,6 +44,8 @@ public class ErpOperateController implements IErpOperateService {
 
     @Resource
     private IESUserRaffleOrderRepository userRaffleOrderRepository;
+    @Resource
+    private IActivityDetailQueryRepository activityDetailQueryRepository;
     @Resource
     private IRaffleActivityStageService raffleActivityStageService;
     @Resource
@@ -208,6 +215,103 @@ public class ErpOperateController implements IErpOperateService {
                     .info(ResponseCode.UN_ERROR.getInfo())
                     .build();
         }
+    }
+
+    /**
+     * 查询 ERP 活动详情，包括当前策略奖品和可购买 SKU。
+     *
+     * <p>该接口只读取默认配置库和已装配的库存缓存，不会装配活动、修改库存或变更发布状态。</p>
+     *
+     * <p>curl --request GET --url
+     * 'http://localhost:8092/api/v1/raffle/erp/query_activity_detail?activityId=100401'</p>
+     */
+    @RequestMapping(value = "query_activity_detail", method = RequestMethod.GET)
+    @Override
+    public Response<RaffleActivityDetailResponseDTO> queryActivityDetail(
+            @RequestParam(value = "activityId", required = false) Long activityId) {
+        try {
+            if (activityId == null || activityId <= 0) {
+                throw new IllegalArgumentException("activityId must be greater than 0");
+            }
+            RaffleActivityDetailQueryVO detail = activityDetailQueryRepository.queryActivityDetail(activityId);
+            if (detail == null) {
+                return Response.<RaffleActivityDetailResponseDTO>builder()
+                        .code(ResponseCode.ILLEGAL_PARAMETER.getCode())
+                        .info("activityId not found: " + activityId)
+                        .build();
+            }
+            return Response.<RaffleActivityDetailResponseDTO>builder()
+                    .code(ResponseCode.SUCCESS.getCode())
+                    .info(ResponseCode.SUCCESS.getInfo())
+                    .data(toActivityDetailResponse(detail))
+                    .build();
+        } catch (IllegalArgumentException e) {
+            log.warn("查询 ERP 活动详情参数非法 activityId:{} info:{}", activityId, e.getMessage());
+            return Response.<RaffleActivityDetailResponseDTO>builder()
+                    .code(ResponseCode.ILLEGAL_PARAMETER.getCode())
+                    .info(e.getMessage())
+                    .build();
+        } catch (Exception e) {
+            log.error("查询 ERP 活动详情失败 activityId:{}", activityId, e);
+            return Response.<RaffleActivityDetailResponseDTO>builder()
+                    .code(ResponseCode.UN_ERROR.getCode())
+                    .info(ResponseCode.UN_ERROR.getInfo())
+                    .build();
+        }
+    }
+
+    private RaffleActivityDetailResponseDTO toActivityDetailResponse(RaffleActivityDetailQueryVO detail) {
+        List<RaffleActivityPrizeResponseDTO> prizes = new ArrayList<>();
+        if (detail.getPrizes() != null) {
+            for (RaffleActivityDetailQueryVO.Prize prize : detail.getPrizes()) {
+                prizes.add(RaffleActivityPrizeResponseDTO.builder()
+                        .awardId(prize.getAwardId())
+                        .awardTitle(prize.getAwardTitle())
+                        .awardSubtitle(prize.getAwardSubtitle())
+                        .awardKey(prize.getAwardKey())
+                        .awardConfig(prize.getAwardConfig())
+                        .awardRate(prize.getAwardRate())
+                        .awardCount(prize.getAwardCount())
+                        .awardCountSurplus(prize.getAwardCountSurplus())
+                        .awardCountSurplusSource(prize.getAwardCountSurplusSource())
+                        .awardCountSurplusFallbackDb(prize.getAwardCountSurplusFallbackDb())
+                        .sort(prize.getSort())
+                        .ruleModels(prize.getRuleModels())
+                        .ruleUnlockCount(prize.getRuleUnlockCount())
+                        .build());
+            }
+        }
+
+        List<RaffleActivitySkuResponseDTO> skus = new ArrayList<>();
+        if (detail.getSkus() != null) {
+            for (RaffleActivityDetailQueryVO.Sku sku : detail.getSkus()) {
+                skus.add(RaffleActivitySkuResponseDTO.builder()
+                        .sku(sku.getSku())
+                        .activityId(sku.getActivityId())
+                        .activityCountId(sku.getActivityCountId())
+                        .countQuota(sku.getCountQuota())
+                        .dayCount(sku.getDayCount())
+                        .monthCount(sku.getMonthCount())
+                        .stockCount(sku.getStockCount())
+                        .stockCountSurplus(sku.getStockCountSurplus())
+                        .stockCountSurplusSource(sku.getStockCountSurplusSource())
+                        .stockCountSurplusFallbackDb(sku.getStockCountSurplusFallbackDb())
+                        .productAmount(sku.getProductAmount())
+                        .build());
+            }
+        }
+
+        return RaffleActivityDetailResponseDTO.builder()
+                .activityId(detail.getActivityId())
+                .activityName(detail.getActivityName())
+                .activityDesc(detail.getActivityDesc())
+                .strategyId(detail.getStrategyId())
+                .activityState(detail.getActivityState())
+                .beginDateTime(detail.getBeginDateTime())
+                .endDateTime(detail.getEndDateTime())
+                .prizes(prizes)
+                .skus(skus)
+                .build();
     }
 
 }
