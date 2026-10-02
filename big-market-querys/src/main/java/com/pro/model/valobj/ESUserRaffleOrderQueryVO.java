@@ -17,7 +17,7 @@ public class ESUserRaffleOrderQueryVO {
     public static final int DEFAULT_PAGE_NO = 1;
     public static final int DEFAULT_PAGE_SIZE = 20;
     public static final int MAX_PAGE_SIZE = 100;
-    public static final int MAX_OFFSET = 10_000;
+    public static final int MAX_RESULT_WINDOW = 10_000;
     public static final int MAX_FILTER_LENGTH = 128;
 
     private String userId;
@@ -54,8 +54,9 @@ public class ESUserRaffleOrderQueryVO {
             throw new IllegalArgumentException("pageSize must be between 1 and " + MAX_PAGE_SIZE);
         }
         long actualOffset = (long) (actualPageNo - 1) * actualPageSize;
-        if (actualOffset > MAX_OFFSET) {
-            throw new IllegalArgumentException("page offset must be no greater than " + MAX_OFFSET);
+        long pageEnd = actualOffset + actualPageSize;
+        if (pageEnd > MAX_RESULT_WINDOW) {
+            throw new IllegalArgumentException("page offset plus pageSize must be no greater than " + MAX_RESULT_WINDOW);
         }
         validateId("activityId", activityId);
         validateId("strategyId", strategyId);

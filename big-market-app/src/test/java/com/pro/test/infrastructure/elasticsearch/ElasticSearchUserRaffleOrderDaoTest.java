@@ -1,8 +1,7 @@
-package com.pro.test.infrastructure.elasticsearch;
+package com.pro.infrastructure.elasticsearch;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pro.infrastructure.elasticsearch.ElasticSearchUserRaffleOrderDao;
 import com.pro.model.valobj.ESUserRaffleOrderQueryVO;
 import org.junit.Test;
 
@@ -42,8 +41,51 @@ public class ElasticSearchUserRaffleOrderDaoTest {
     @Test(expected = IllegalArgumentException.class)
     public void shouldRejectDeepPagination() {
         ElasticSearchUserRaffleOrderDao.buildSearchBody(ESUserRaffleOrderQueryVO.builder()
-                .pageNo(102)
+                .pageNo(101)
                 .pageSize(100)
                 .build());
+    }
+
+    @Test
+    public void shouldAllowPaginationAtResultWindowBoundary() throws Exception {
+        JsonNode body = objectMapper.readTree(ElasticSearchUserRaffleOrderDao.buildSearchBody(
+                ESUserRaffleOrderQueryVO.builder().pageNo(100).pageSize(100).build()));
+
+        assertEquals(9_900, body.get("from").asInt());
+        assertEquals(100, body.get("size").asInt());
+    }
+
+    @Test
+    public void shouldRejectTimedOutSearchResponse() {
+        String response = "{\"timed_out\":true,\"_shards\":{\"failed\":0},"
+                + "\"hits\":{\"total\":{\"value\":1,\"relation\":\"eq\"},\"hits\":[]}}";
+
+        try {
+            ElasticSearchUserRaffleOrderDao.parseSearchResponse(response, ESUserRaffleOrderQueryVO.builder()
+                    .pageNo(1)
+                    .pageSize(20)
+                    .build());
+        } catch (IllegalStateException e) {
+            assertTrue(e.getMessage().contains("timed out"));
+            return;
+        }
+        throw new AssertionError("timed_out search response must be rejected");
+    }
+
+    @Test
+    public void shouldRejectFailedShardSearchResponse() {
+        String response = "{\"timed_out\":false,\"_shards\":{\"failed\":1},"
+                + "\"hits\":{\"total\":{\"value\":1,\"relation\":\"eq\"},\"hits\":[]}}";
+
+        try {
+            ElasticSearchUserRaffleOrderDao.parseSearchResponse(response, ESUserRaffleOrderQueryVO.builder()
+                    .pageNo(1)
+                    .pageSize(20)
+                    .build());
+        } catch (IllegalStateException e) {
+            assertTrue(e.getMessage().contains("failed shards"));
+            return;
+        }
+        throw new AssertionError("failed-shard search response must be rejected");
     }
 }

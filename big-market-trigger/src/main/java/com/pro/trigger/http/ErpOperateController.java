@@ -73,7 +73,7 @@ public class ErpOperateController implements IErpOperateService {
     /**
      * 查询运营数据，用户抽奖单分页列表。
      *
-     * <p>过滤条件均为可选；分页默认第 1 页、每页 20 条，最多 100 条且 offset 不超过 10000。</p>
+     * <p>过滤条件均为可选；分页默认第 1 页、每页 20 条，最多 100 条且 from + size 不超过 10000。</p>
      */
     @RequestMapping(value = "query_user_raffle_order_page", method = RequestMethod.GET)
     @Override

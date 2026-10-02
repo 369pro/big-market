@@ -145,9 +145,18 @@ public class ElasticSearchUserRaffleOrderDao implements IElasticSearchUserRaffle
         }
     }
 
-    private ESUserRaffleOrderPageVO parseSearchResponse(String responseBody, ESUserRaffleOrderQueryVO query) {
+    static ESUserRaffleOrderPageVO parseSearchResponse(String responseBody, ESUserRaffleOrderQueryVO query) {
         try {
             JsonNode root = OBJECT_MAPPER.readTree(responseBody);
+            JsonNode timedOut = root.get("timed_out");
+            if (timedOut != null && timedOut.isBoolean() && timedOut.booleanValue()) {
+                throw new IllegalStateException("Elasticsearch order search timed out");
+            }
+            JsonNode shards = root.get("_shards");
+            JsonNode failedShards = shards == null ? null : shards.get("failed");
+            if (failedShards != null && failedShards.isNumber() && failedShards.intValue() > 0) {
+                throw new IllegalStateException("Elasticsearch order search returned failed shards");
+            }
             JsonNode hits = root.path("hits");
             JsonNode totalNode = hits.path("total");
             if (hits.isMissingNode() || totalNode.isMissingNode()) {
@@ -188,7 +197,7 @@ public class ElasticSearchUserRaffleOrderDao implements IElasticSearchUserRaffle
         }
     }
 
-    private ESUserRaffleOrderVO toOrder(JsonNode source) {
+    private static ESUserRaffleOrderVO toOrder(JsonNode source) {
         return ESUserRaffleOrderVO.builder()
                 .userId(textValue(source, "_user_id"))
                 .activityId(longValue(source, "_activity_id"))
