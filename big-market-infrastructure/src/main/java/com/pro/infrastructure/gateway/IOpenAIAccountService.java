@@ -1,6 +1,8 @@
 package com.pro.infrastructure.gateway;
 
 
+import com.pro.infrastructure.gateway.dto.AccountBalanceResponseDTO;
+import com.pro.infrastructure.gateway.dto.AdjustBalanceRequestDTO;
 import com.pro.infrastructure.gateway.dto.AdjustQuotaRequestDTO;
 import com.pro.infrastructure.gateway.dto.AdjustQuotaResponseDTO;
 import com.pro.infrastructure.gateway.response.Response;
@@ -17,5 +19,8 @@ public interface IOpenAIAccountService {
 
     @POST("/api/v1/account/adjust_quota")
     Call<Response<AdjustQuotaResponseDTO>> adjustQuota(@Body AdjustQuotaRequestDTO requestDTO);
+
+    @POST("/api/v1/account/adjust_balance")
+    Call<Response<AccountBalanceResponseDTO>> adjustBalance(@Body AdjustBalanceRequestDTO requestDTO);
 
 }
