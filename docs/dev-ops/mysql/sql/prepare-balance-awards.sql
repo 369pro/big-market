@@ -1,6 +1,6 @@
 -- Local activity 100401: prepare a NEW strategy, preserving historical count prizes.
 -- Set @cny_per_legacy_count in this same connection BEFORE sourcing this file.
--- Example proposal (requires a business decision): SET @cny_per_legacy_count = 0.01;
+-- Local test rate raised on 2026-10-02: SET @cny_per_legacy_count = 0.10;
 -- This script deliberately does not switch the live activity.
 -- Deploy openai_balance and the account wallet migration before activation.
 USE big_market;
@@ -54,7 +54,9 @@ BEGIN
         (strategy_id, award_id, award_title, award_subtitle, award_count, award_count_surplus, award_rate, rule_models, sort)
     SELECT 10008, IF(s.award_id = 101, 101, s.award_id + 1000),
         IF(s.award_id = 101, s.award_title,
-            CONCAT('¥', TRIM(TRAILING '.' FROM TRIM(TRAILING '0' FROM a.award_config)), ' 对话余额')),
+            CONCAT('¥', IF(CAST(a.award_config AS DECIMAL(20,8)) = ROUND(CAST(a.award_config AS DECIMAL(20,8)), 2),
+                CAST(CAST(a.award_config AS DECIMAL(20,2)) AS CHAR),
+                TRIM(TRAILING '.' FROM TRIM(TRAILING '0' FROM a.award_config))), ' 对话余额')),
         s.award_subtitle, s.award_count, s.award_count_surplus, s.award_rate, s.rule_models, s.sort
     FROM strategy_award s
     LEFT JOIN award a ON a.award_id = s.award_id + 1000
