@@ -2,14 +2,11 @@ package com.pro.config;
 
 import org.apache.ibatis.plugin.Interceptor;
 import org.apache.ibatis.session.SqlSessionFactory;
-import org.elasticsearch.xpack.sql.jdbc.EsDataSource;
 import org.mybatis.spring.SqlSessionFactoryBean;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.Environment;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 import javax.sql.DataSource;
@@ -17,25 +14,9 @@ import javax.sql.DataSource;
 @Configuration
 public class DataSourceConfig {
 
-    @Configuration
-    @MapperScan(basePackages = "com.pro.infrastructure.elasticsearch", sqlSessionFactoryRef = "elasticsearchSqlSessionFactory")
-    static class ElasticsearchMyBatisConfig {
-
-        @Bean("elasticsearchDataSource")
-        @ConfigurationProperties(prefix = "spring.elasticsearch.datasource")
-        public DataSource igniteDataSource(Environment environment) {
-            return new EsDataSource();
-        }
-
-        @Bean("elasticsearchSqlSessionFactory")
-        public SqlSessionFactory elasticsearchSqlSessionFactory(@Qualifier("elasticsearchDataSource") DataSource elasticsearchDataSource) throws Exception {
-            SqlSessionFactoryBean factoryBean = new SqlSessionFactoryBean();
-            factoryBean.setDataSource(elasticsearchDataSource);
-            factoryBean.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath:/mybatis/mapper/elasticsearch/*.xml"));
-            return factoryBean.getObject();
-        }
-    }
-
+    /**
+     * Elasticsearch 订单读模型通过 REST _search 访问，不再创建 x-pack SQL JDBC 数据源。
+     */
     @Configuration
     @MapperScan(basePackages = "com.pro.infrastructure.dao", sqlSessionFactoryRef = "mysqlSqlSessionFactory")
     static class MysqlMyBatisConfig {

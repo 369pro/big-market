@@ -3,6 +3,8 @@ package com.pro.trigger.api;
 
 
 import com.pro.trigger.api.dto.ESUserRaffleOrderResponseDTO;
+import com.pro.trigger.api.dto.ESUserRaffleOrderPageResponseDTO;
+import com.pro.trigger.api.dto.ESUserRaffleOrderQueryRequestDTO;
 import com.pro.trigger.api.dto.RaffleActivityStageResponseDTO;
 import com.pro.trigger.api.dto.UpdateStageActivity2ActiveRequestDTO;
 import com.pro.trigger.api.response.Response;
@@ -17,6 +19,8 @@ import java.util.List;
 public interface IErpOperateService {
 
     Response<List<ESUserRaffleOrderResponseDTO>> queryUserRaffleOrder();
+
+    Response<ESUserRaffleOrderPageResponseDTO> queryUserRaffleOrderPage(ESUserRaffleOrderQueryRequestDTO requestDTO);
 
     /**
      * 上架活动，上架后驱动装配

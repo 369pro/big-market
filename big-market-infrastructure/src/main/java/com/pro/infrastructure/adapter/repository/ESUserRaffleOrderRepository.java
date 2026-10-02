@@ -1,50 +1,42 @@
 package com.pro.infrastructure.adapter.repository;
 
-
 import com.pro.adapter.repository.IESUserRaffleOrderRepository;
 import com.pro.infrastructure.elasticsearch.IElasticSearchUserRaffleOrderDao;
-import com.pro.infrastructure.elasticsearch.po.UserRaffleOrder;
+import com.pro.model.valobj.ESUserRaffleOrderPageVO;
+import com.pro.model.valobj.ESUserRaffleOrderQueryVO;
 import com.pro.model.valobj.ESUserRaffleOrderVO;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 import javax.annotation.Resource;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
- * @author Fuzhengwei bugstack.cn @小傅哥
- * @description
- * @create 2024-09-21 10:14
+ * 用户抽奖订单查询仓储。
  */
-@Slf4j
 @Repository
 public class ESUserRaffleOrderRepository implements IESUserRaffleOrderRepository {
 
     @Resource
     private IElasticSearchUserRaffleOrderDao elasticSearchUserRaffleOrderDao;
 
+    /**
+     * 兼容旧的无参查询接口，返回默认第一页的十条数据。
+     */
     @Override
     public List<ESUserRaffleOrderVO> queryESUserRaffleOrderVOList() {
-        // 查询数据
-        List<UserRaffleOrder> userRaffleOrders = elasticSearchUserRaffleOrderDao.queryUserRaffleOrderList();
-        // 封装数据
-        List<ESUserRaffleOrderVO> esUserRaffleOrderVOS = new ArrayList<>();
-        for (UserRaffleOrder userRaffleOrder: userRaffleOrders){
-            ESUserRaffleOrderVO esUserRaffleOrderVO = ESUserRaffleOrderVO.builder()
-                        .userId(userRaffleOrder.getUserId())
-                        .activityId(userRaffleOrder.getActivityId())
-                        .activityName(userRaffleOrder.getActivityName())
-                        .strategyId(userRaffleOrder.getStrategyId())
-                        .orderId(userRaffleOrder.getOrderId())
-                        .orderTime(userRaffleOrder.getOrderTime())
-                        .orderState(userRaffleOrder.getOrderState())
-                        .createTime(userRaffleOrder.getCreateTime())
-                        .updateTime(userRaffleOrder.getUpdateTime())
-                        .build();
-            esUserRaffleOrderVOS.add(esUserRaffleOrderVO);
+        ESUserRaffleOrderPageVO page = queryESUserRaffleOrderPage(ESUserRaffleOrderQueryVO.builder()
+                .pageNo(1)
+                .pageSize(10)
+                .build());
+        if (page == null || page.getList() == null) {
+            throw new IllegalStateException("订单查询未返回分页结果");
         }
-        return esUserRaffleOrderVOS;
+        return page.getList();
+    }
+
+    @Override
+    public ESUserRaffleOrderPageVO queryESUserRaffleOrderPage(ESUserRaffleOrderQueryVO query) {
+        return elasticSearchUserRaffleOrderDao.queryUserRaffleOrderPage(query);
     }
 
 }

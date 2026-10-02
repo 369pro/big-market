@@ -1,14 +1,10 @@
 package com.pro.infrastructure.elasticsearch;
 
+import com.pro.model.valobj.ESUserRaffleOrderPageVO;
+import com.pro.model.valobj.ESUserRaffleOrderQueryVO;
 
-import com.pro.infrastructure.elasticsearch.po.UserRaffleOrder;
-import org.apache.ibatis.annotations.Mapper;
-
-import java.util.List;
-
-@Mapper
 public interface IElasticSearchUserRaffleOrderDao {
 
-    List<UserRaffleOrder> queryUserRaffleOrderList();
+    ESUserRaffleOrderPageVO queryUserRaffleOrderPage(ESUserRaffleOrderQueryVO query);
 
 }
