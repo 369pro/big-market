@@ -24,6 +24,19 @@ public class RaffleActivityStageResponseDTO {
     private String source;
     /** 活动ID */
     private Long activityId;
+    /** 活动名称 */
+    private String activityName;
+    /** 活动说明 */
+    private String activityDesc;
+    /** 当前策略 */
+    private Long strategyId;
+    /** 活动状态 */
+    private String activityState;
+    /** 活动开始时间 */
+    private java.util.Date beginDateTime;
+    /** 活动结束时间 */
+    private java.util.Date endDateTime;
+
     /** 上架状态；create、active、expire */
     private String state;
 

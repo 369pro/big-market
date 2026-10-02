@@ -886,6 +886,12 @@ public class ActivityRepository implements IActivityRepository {
                     .source(raffleActivityStage.getSource())
                     .activityId(raffleActivityStage.getActivityId())
                     .state(raffleActivityStage.getState())
+                    .activityName(raffleActivityStage.getActivityName())
+                    .activityDesc(raffleActivityStage.getActivityDesc())
+                    .strategyId(raffleActivityStage.getStrategyId())
+                    .activityState(raffleActivityStage.getActivityState())
+                    .beginDateTime(raffleActivityStage.getBeginDateTime())
+                    .endDateTime(raffleActivityStage.getEndDateTime())
                     .build();
             raffleActivityStageEntities.add(raffleActivityStageEntity);
         }

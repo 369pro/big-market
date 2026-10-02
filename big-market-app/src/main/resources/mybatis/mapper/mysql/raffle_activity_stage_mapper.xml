@@ -7,6 +7,12 @@
         <result column="channel" property="channel"/>
         <result column="source" property="source"/>
         <result column="activity_id" property="activityId"/>
+        <result column="activity_name" property="activityName"/>
+        <result column="activity_desc" property="activityDesc"/>
+        <result column="strategy_id" property="strategyId"/>
+        <result column="activity_state" property="activityState"/>
+        <result column="begin_date_time" property="beginDateTime"/>
+        <result column="end_date_time" property="endDateTime"/>
         <result column="state" property="state"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
@@ -38,9 +44,12 @@
     </select>
 
     <select id="queryStageActivityList" resultMap="dataMap">
-        select id, channel, source, activity_id, state, create_time, update_time
-        from raffle_activity_stage
-        order by id desc
+        select s.id, s.channel, s.source, s.activity_id, s.state, s.create_time, s.update_time,
+               a.activity_name, a.activity_desc, a.strategy_id, a.state as activity_state,
+               a.begin_date_time, a.end_date_time
+        from raffle_activity_stage s
+        left join raffle_activity a on a.activity_id = s.activity_id
+        order by s.id desc
     </select>
 
 </mapper>
