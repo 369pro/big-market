@@ -71,7 +71,7 @@
           and s.source = #{source}
           and s.state = 'active'
           and a.state = 'open'
-          and a.begin_date_time <= now()
+          and a.begin_date_time &lt;= now()
           and a.end_date_time >= now()
         order by s.id desc
     </select>
