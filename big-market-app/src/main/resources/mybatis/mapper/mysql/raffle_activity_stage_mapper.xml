@@ -26,30 +26,72 @@
     </insert>
     
     <update id="updateStageActivity2ActiveById" parameterType="java.lang.Long">
-        update raffle_activity_stage set state = 'active'
+        update raffle_activity_stage set state = 'active', update_time = now()
         where id = #{id}
+    </update>
+
+    <update id="updateStageActivityState" parameterType="com.pro.infrastructure.dao.po.RaffleActivityStage">
+        update raffle_activity_stage
+        set state = #{state}, update_time = now()
+        where activity_id = #{activityId}
+          and channel = #{channel}
+          and source = #{source}
     </update>
 
     <select id="queryStageActivity2ActiveById" parameterType="java.lang.Long" resultType="java.lang.Long">
         select activity_id from raffle_activity_stage where id = #{id}
     </select>
 
-    <select id="queryStageActiveBySC" parameterType="com.pro.infrastructure.dao.po.RaffleActivityStage" resultType="java.lang.Long">
-        select activity_id from raffle_activity_stage
-        where
-            channel = #{channel} and
-            source = #{source} and
-            state = 'active'
-        limit 1
-    </select>
-
-    <select id="queryStageActivityList" resultMap="dataMap">
+    <select id="queryStageActivityById" parameterType="java.lang.Long" resultMap="dataMap">
         select s.id, s.channel, s.source, s.activity_id, s.state, s.create_time, s.update_time,
                a.activity_name, a.activity_desc, a.strategy_id, a.state as activity_state,
                a.begin_date_time, a.end_date_time
         from raffle_activity_stage s
         left join raffle_activity a on a.activity_id = s.activity_id
+        where s.id = #{id}
+    </select>
+
+    <select id="queryStageActivityByKey" parameterType="com.pro.infrastructure.dao.po.RaffleActivityStage" resultMap="dataMap">
+        select id, channel, source, activity_id, state, create_time, update_time
+        from raffle_activity_stage
+        where activity_id = #{activityId}
+          and channel = #{channel}
+          and source = #{source}
+        order by id desc
+        limit 1
+    </select>
+
+    <select id="queryStageActiveBySC" parameterType="com.pro.infrastructure.dao.po.RaffleActivityStage" resultMap="dataMap">
+        select s.id, s.channel, s.source, s.activity_id, s.state, s.create_time, s.update_time,
+               a.activity_name, a.activity_desc, a.strategy_id, a.state as activity_state,
+               a.begin_date_time, a.end_date_time
+        from raffle_activity_stage s
+        join raffle_activity a on a.activity_id = s.activity_id
+        where s.channel = #{channel}
+          and s.source = #{source}
+          and s.state = 'active'
+          and a.state = 'open'
+          and a.begin_date_time <= now()
+          and a.end_date_time >= now()
         order by s.id desc
+    </select>
+
+    <select id="queryStageActiveBySCForConflict" parameterType="com.pro.infrastructure.dao.po.RaffleActivityStage" resultMap="dataMap">
+        select id, channel, source, activity_id, state, create_time, update_time
+        from raffle_activity_stage
+        where channel = #{channel}
+          and source = #{source}
+          and state = 'active'
+        order by id desc
+    </select>
+
+    <select id="queryStageActivityList" resultMap="dataMap">
+        select a.activity_id, s.id, s.channel, s.source, s.state, s.create_time, s.update_time,
+               a.activity_name, a.activity_desc, a.strategy_id, a.state as activity_state,
+               a.begin_date_time, a.end_date_time
+        from raffle_activity a
+        left join raffle_activity_stage s on s.activity_id = a.activity_id
+        order by a.activity_id desc, s.id desc
     </select>
 
 </mapper>

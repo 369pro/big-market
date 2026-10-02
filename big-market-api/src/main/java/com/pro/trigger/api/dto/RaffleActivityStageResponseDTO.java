@@ -37,7 +37,7 @@ public class RaffleActivityStageResponseDTO {
     /** 活动结束时间 */
     private java.util.Date endDateTime;
 
-    /** 上架状态；create、active、expire */
+    /** 上架状态；create、active、inactive、expire；未上架活动为 null */
     private String state;
 
 }

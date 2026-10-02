@@ -5,7 +5,6 @@ import com.pro.adapter.repository.IActivityDetailQueryRepository;
 import com.pro.adapter.repository.IESUserRaffleOrderRepository;
 import com.pro.domain.activity.model.entity.RaffleActivityStageEntity;
 import com.pro.domain.activity.service.IRaffleActivityStageService;
-import com.pro.domain.activity.service.armory.IActivityArmory;
 import com.pro.model.valobj.ESUserRaffleOrderPageVO;
 import com.pro.model.valobj.ESUserRaffleOrderQueryVO;
 import com.pro.model.valobj.ESUserRaffleOrderVO;
@@ -19,8 +18,10 @@ import com.pro.trigger.api.dto.ESUserRaffleOrderQueryRequestDTO;
 import com.pro.trigger.api.dto.ESUserRaffleOrderResponseDTO;
 import com.pro.trigger.api.dto.RaffleActivityStageResponseDTO;
 import com.pro.trigger.api.dto.UpdateStageActivity2ActiveRequestDTO;
+import com.pro.trigger.api.dto.UpdateStageActivityStateRequestDTO;
 import com.pro.trigger.api.response.Response;
 import com.pro.types.enums.ResponseCode;
+import com.pro.types.exception.AppException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.dubbo.config.annotation.DubboService;
 import org.springframework.web.bind.annotation.*;
@@ -48,9 +49,6 @@ public class ErpOperateController implements IErpOperateService {
     private IActivityDetailQueryRepository activityDetailQueryRepository;
     @Resource
     private IRaffleActivityStageService raffleActivityStageService;
-    @Resource
-    private IActivityArmory activityArmory;
-
     /**
      * 查询运营数据，用户抽奖单列表
      * curl --request GET --url 'http://localhost:8098/api/v1/raffle/erp/query_user_raffle_order'
@@ -153,22 +151,67 @@ public class ErpOperateController implements IErpOperateService {
     @Override
     public Response<Boolean> updateStageActivity2Active(@RequestBody UpdateStageActivity2ActiveRequestDTO requestDTO) {
         try {
+            if (requestDTO == null || requestDTO.getId() == null) {
+                throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), "id must not be null");
+            }
             Long id = requestDTO.getId();
             log.info("更新上架活动状态为生效开始 id:{}", id);
-            Long activityId = raffleActivityStageService.queryStageActivity2ActiveById(id);
-            boolean assembled = activityArmory.assembleActivitySkuByActivityId(activityId);
-            log.info("更新上架活动状态为装配完成 activityId:{} assembled:{}", activityId, assembled);
-
             raffleActivityStageService.updateStageActivity2Active(id);
-            log.info("更新上架活动状态为生效完成 activityId:{}", activityId);
+            log.info("更新上架活动状态为生效完成 id:{}", id);
 
             return Response.<Boolean>builder()
                     .code(ResponseCode.SUCCESS.getCode())
                     .info(ResponseCode.SUCCESS.getInfo())
                     .data(true)
                     .build();
+        } catch (AppException e) {
+            log.warn("更新上架活动状态为生效失败 id:{} info:{}", requestDTO == null ? null : requestDTO.getId(), e.getInfo());
+            return Response.<Boolean>builder()
+                    .code(e.getCode())
+                    .info(e.getInfo() == null ? ResponseCode.UN_ERROR.getInfo() : e.getInfo())
+                    .build();
         } catch (Exception e) {
-            log.error("更新上架活动状态为生效开始，失败 id:{}", requestDTO.getId(), e);
+            log.error("更新上架活动状态为生效失败 id:{}", requestDTO == null ? null : requestDTO.getId(), e);
+            return Response.<Boolean>builder()
+                    .code(ResponseCode.UN_ERROR.getCode())
+                    .info(ResponseCode.UN_ERROR.getInfo())
+                    .build();
+        }
+    }
+
+    /**
+     * Create or update an exact activity/channel/source stage state.
+     *
+     * <p>Activation validates the activity and prepares both activity and
+     * strategy caches. Inactive updates only remove that channel/source
+     * mapping and never close the activity globally.</p>
+     */
+    @RequestMapping(value = "update_stage_activity_state", method = RequestMethod.POST)
+    @Override
+    public Response<Boolean> updateStageActivityState(@RequestBody UpdateStageActivityStateRequestDTO requestDTO) {
+        try {
+            if (requestDTO == null) {
+                throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), "request body must not be null");
+            }
+            raffleActivityStageService.updateStageActivityState(
+                    requestDTO.getActivityId(), requestDTO.getChannel(), requestDTO.getSource(), requestDTO.getState());
+            return Response.<Boolean>builder()
+                    .code(ResponseCode.SUCCESS.getCode())
+                    .info(ResponseCode.SUCCESS.getInfo())
+                    .data(true)
+                    .build();
+        } catch (AppException e) {
+            log.warn("更新活动展台状态失败 activityId:{} channel:{} source:{} state:{} info:{}",
+                    requestDTO == null ? null : requestDTO.getActivityId(),
+                    requestDTO == null ? null : requestDTO.getChannel(),
+                    requestDTO == null ? null : requestDTO.getSource(),
+                    requestDTO == null ? null : requestDTO.getState(), e.getInfo());
+            return Response.<Boolean>builder()
+                    .code(e.getCode())
+                    .info(e.getInfo() == null ? ResponseCode.UN_ERROR.getInfo() : e.getInfo())
+                    .build();
+        } catch (Exception e) {
+            log.error("更新活动展台状态失败", e);
             return Response.<Boolean>builder()
                     .code(ResponseCode.UN_ERROR.getCode())
                     .info(ResponseCode.UN_ERROR.getInfo())

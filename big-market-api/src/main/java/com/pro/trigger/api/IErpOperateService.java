@@ -8,6 +8,7 @@ import com.pro.trigger.api.dto.ESUserRaffleOrderQueryRequestDTO;
 import com.pro.trigger.api.dto.RaffleActivityDetailResponseDTO;
 import com.pro.trigger.api.dto.RaffleActivityStageResponseDTO;
 import com.pro.trigger.api.dto.UpdateStageActivity2ActiveRequestDTO;
+import com.pro.trigger.api.dto.UpdateStageActivityStateRequestDTO;
 import com.pro.trigger.api.response.Response;
 
 import java.util.List;
@@ -29,6 +30,12 @@ public interface IErpOperateService {
      * @param requestDTO 上架流水ID
      */
     Response<Boolean> updateStageActivity2Active(UpdateStageActivity2ActiveRequestDTO requestDTO);
+
+    /**
+     * Create or update an activity stage for an exact channel/source pair.
+     * The accepted states are {@code active} and {@code inactive}.
+     */
+    Response<Boolean> updateStageActivityState(UpdateStageActivityStateRequestDTO requestDTO);
 
     Response<List<RaffleActivityStageResponseDTO>> queryRaffleActivityStageList();
 

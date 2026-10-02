@@ -33,7 +33,7 @@ public class RaffleActivityStage {
     /** 活动结束时间 */
     private java.util.Date endDateTime;
 
-    /** 上架状态；create、active、expire */
+    /** 上架状态；create、active、inactive、expire */
     private String state;
     /** 创建时间 */
     private Date createTime;

@@ -18,9 +18,17 @@ public interface IRaffleActivityStageDao {
 
     Integer updateStageActivity2ActiveById(Long id);
 
-    Long queryStageActivity2ActiveById(Long id);
+    Integer updateStageActivityState(RaffleActivityStage raffleActivityStage);
 
-    Long queryStageActiveBySC(RaffleActivityStage raffleActivityStage);
+    RaffleActivityStage queryStageActivityById(Long id);
+
+    RaffleActivityStage queryStageActivityByKey(RaffleActivityStage raffleActivityStage);
+
+    List<RaffleActivityStage> queryStageActiveBySC(RaffleActivityStage raffleActivityStage);
+
+    List<RaffleActivityStage> queryStageActiveBySCForConflict(RaffleActivityStage raffleActivityStage);
+
+    Long queryStageActivity2ActiveById(Long id);
 
     List<RaffleActivityStage> queryStageActivityList();
 

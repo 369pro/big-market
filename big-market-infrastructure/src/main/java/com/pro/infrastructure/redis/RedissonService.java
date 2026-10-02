@@ -2,6 +2,7 @@ package com.pro.infrastructure.redis;
 
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.*;
+import org.redisson.client.codec.StringCodec;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
@@ -173,6 +174,14 @@ public class RedissonService implements IRedisService {
     @Override
     public void setAtomicLong(String key, long value) {
         redissonClient.getAtomicLong(key).set(value);
+    }
+
+    @Override
+    public Boolean setAtomicLongIfAbsent(String key, long value) {
+        // RAtomicLong and StringCodec both store a Redis integer string.  NX
+        // makes initialization safe when multiple armory requests race.
+        return redissonClient.getBucket(key, StringCodec.INSTANCE)
+                .trySet(String.valueOf(value));
     }
 
     @Override

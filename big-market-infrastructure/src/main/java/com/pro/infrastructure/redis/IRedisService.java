@@ -259,6 +259,12 @@ public interface IRedisService {
     void setAtomicLong(String key, long value);
 
     /**
+     * Initialize an atomic counter only when the Redis key does not already exist.
+     * This preserves consumed stock when an armory operation is repeated.
+     */
+    Boolean setAtomicLongIfAbsent(String key, long value);
+
+    /**
      * 获取值
      *
      * @param key   key 键

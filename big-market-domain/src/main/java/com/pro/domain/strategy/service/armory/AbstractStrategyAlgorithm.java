@@ -43,8 +43,11 @@ public abstract class AbstractStrategyAlgorithm implements IStrategyArmory, IStr
         // strategy_award_count_key_100001_101:8000
         for (StrategyAwardEntity strategyAward : strategyAwardEntities) {
             Integer awardId = strategyAward.getAwardId();
-            Integer awardCount = strategyAward.getAwardCount();
-            cacheStrategyAwardCount(strategyId, awardId, awardCount);
+            // Repeated armory calls must preserve the live Redis counter.  The
+            // repository value is the remaining stock, not the original total.
+            Integer awardCountSurplus = strategyAward.getAwardCountSurplus();
+            cacheStrategyAwardCount(strategyId, awardId,
+                    awardCountSurplus == null ? 0 : awardCountSurplus);
         }
 
         // 3.1 默认装配配置【全量抽奖概率】 装配最开始的抽奖table

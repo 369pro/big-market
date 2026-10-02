@@ -4,6 +4,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Resource;
@@ -119,6 +120,7 @@ public class ActivityRepository implements IActivityRepository {
         if (null != activityEntity) return activityEntity;
         // 从库中获取数据
         RaffleActivity raffleActivity = raffleActivityDao.queryRaffleActivityByActivityId(activityId);
+        if (raffleActivity == null) return null;
         activityEntity = ActivityEntity.builder()
                 .activityId(raffleActivity.getActivityId())
                 .activityName(raffleActivity.getActivityName())
@@ -855,24 +857,134 @@ public class ActivityRepository implements IActivityRepository {
     @Override
     public void appendStageActivity(String channel, String source, Long activityId) {
         RaffleActivityStage raffleActivityStage = new RaffleActivityStage();
-        raffleActivityStage.setChannel(channel);
-        raffleActivityStage.setSource(source);
+        raffleActivityStage.setChannel(normalizeStagePart(channel));
+        raffleActivityStage.setSource(normalizeStagePart(source));
         raffleActivityStage.setActivityId(activityId);
+        raffleActivityStage.setState("create");
         raffleActivityStageDao.insert(raffleActivityStage);
+        invalidateStageActivityCache(raffleActivityStage.getChannel(), raffleActivityStage.getSource());
     }
 
     @Override
     public void updateStageActivity2Active(Long id) {
-        // 更新上架状态
-        raffleActivityStageDao.updateStageActivity2ActiveById(id);
+        RaffleActivityStage stage = raffleActivityStageDao.queryStageActivityById(id);
+        if (stage == null) {
+            throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), "上架记录不存在: " + id);
+        }
+        updateStageActivityState(stage.getActivityId(), stage.getChannel(), stage.getSource(), "active");
+    }
+
+    @Override
+    public void updateStageActivityState(Long activityId, String channel, String source, String state) {
+        String normalizedChannel = normalizeStagePart(channel);
+        String normalizedSource = normalizeStagePart(source);
+        String lockKey = Constants.RedisKey.STAGE_ACTIVITY_LOCK_KEY + normalizedChannel + Constants.UNDERLINE + normalizedSource;
+        RLock lock = redisService.getLock(lockKey);
+        lock.lock();
+        try {
+            transactionTemplate.execute(status -> {
+                RaffleActivity activity = raffleActivityDao.queryRaffleActivityByActivityId(activityId);
+                if (activity == null) {
+                    throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(),
+                            "活动不存在: " + activityId);
+                }
+                if ("active".equals(state)) {
+                    validateStageActivityCanBeActive(activity, activityId);
+                    List<RaffleActivityStage> activeStages = raffleActivityStageDao.queryStageActiveBySCForConflict(
+                            stageKey(normalizedChannel, normalizedSource));
+                    for (RaffleActivityStage activeStage : activeStages) {
+                        if (!activityId.equals(activeStage.getActivityId())) {
+                            throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(),
+                                    "该渠道已有上架活动，请先下架: " + normalizedChannel + "/" + normalizedSource);
+                        }
+                    }
+                }
+
+                RaffleActivityStage stage = stageKey(normalizedChannel, normalizedSource);
+                stage.setActivityId(activityId);
+                stage.setState(state);
+                RaffleActivityStage existingStage = raffleActivityStageDao.queryStageActivityByKey(stage);
+                if (existingStage == null) {
+                    raffleActivityStageDao.insert(stage);
+                } else {
+                    raffleActivityStageDao.updateStageActivityState(stage);
+                }
+                return null;
+            });
+            invalidateStageActivityCache(normalizedChannel, normalizedSource);
+        } finally {
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
+        }
+    }
+
+    private void validateStageActivityCanBeActive(RaffleActivity activity, Long activityId) {
+        if (!"open".equals(activity.getState())) {
+            throw new AppException(ResponseCode.ACTIVITY_STATE_ERROR.getCode(),
+                    "活动未开启: " + activityId);
+        }
+        Date now = new Date();
+        if (activity.getBeginDateTime() == null || activity.getEndDateTime() == null
+                || now.before(activity.getBeginDateTime()) || now.after(activity.getEndDateTime())) {
+            String message = activity.getBeginDateTime() != null && now.before(activity.getBeginDateTime())
+                    ? "活动尚未开始: " + activityId : "活动已结束: " + activityId;
+            throw new AppException(ResponseCode.ACTIVITY_DATE_ERROR.getCode(),
+                    message);
+        }
+        if (activity.getStrategyId() == null || activity.getStrategyId() <= 0) {
+            throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(),
+                    "活动未配置抽奖策略: " + activityId);
+        }
+    }
+
+    private RaffleActivityStage stageKey(String channel, String source) {
+        RaffleActivityStage stage = new RaffleActivityStage();
+        stage.setChannel(normalizeStagePart(channel));
+        stage.setSource(normalizeStagePart(source));
+        return stage;
+    }
+
+    private String normalizeStagePart(String value) {
+        return value == null ? null : value.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private void invalidateStageActivityCache(String channel, String source) {
+        redisService.remove(Constants.RedisKey.STAGE_ACTIVITY_KEY + channel + Constants.UNDERLINE + source);
     }
 
     @Override
     public Long queryStageActiveBySC(String channel, String source) {
-        RaffleActivityStage raffleActivityStage = new RaffleActivityStage();
-        raffleActivityStage.setChannel(channel);
-        raffleActivityStage.setSource(source);
-        return raffleActivityStageDao.queryStageActiveBySC(raffleActivityStage);
+        RaffleActivityStage key = stageKey(channel, source);
+        String cacheKey = Constants.RedisKey.STAGE_ACTIVITY_KEY + key.getChannel()
+                + Constants.UNDERLINE + key.getSource();
+        Object cachedValue = redisService.getValue(cacheKey);
+        Long cachedActivityId = null;
+        if (cachedValue instanceof Number) {
+            cachedActivityId = ((Number) cachedValue).longValue();
+        } else if (cachedValue instanceof String) {
+            try {
+                cachedActivityId = Long.valueOf((String) cachedValue);
+            } catch (NumberFormatException ignored) {
+                // Treat an invalid legacy cache entry as a miss.
+            }
+        }
+        if (cachedActivityId != null) {
+            return cachedActivityId;
+        }
+
+        List<RaffleActivityStage> stages = raffleActivityStageDao.queryStageActiveBySC(key);
+        if (stages == null || stages.isEmpty()) {
+            redisService.remove(cacheKey);
+            return null;
+        }
+        RaffleActivityStage current = stages.get(0);
+        Long activityId = current.getActivityId();
+        if (activityId != null && current.getEndDateTime() != null) {
+            long ttl = Math.max(1L, current.getEndDateTime().getTime() - System.currentTimeMillis() + 1000L);
+            redisService.setValue(cacheKey, activityId, ttl);
+        }
+        return activityId;
     }
 
     @Override
@@ -901,5 +1013,30 @@ public class ActivityRepository implements IActivityRepository {
     @Override
     public Long queryStageActivity2ActiveById(Long id) {
         return raffleActivityStageDao.queryStageActivity2ActiveById(id);
+    }
+
+    @Override
+    public RaffleActivityStageEntity queryStageActivityById(Long id) {
+        RaffleActivityStage stage = raffleActivityStageDao.queryStageActivityById(id);
+        if (stage == null) {
+            return null;
+        }
+        return toStageEntity(stage);
+    }
+
+    private RaffleActivityStageEntity toStageEntity(RaffleActivityStage stage) {
+        return RaffleActivityStageEntity.builder()
+                .id(stage.getId())
+                .channel(stage.getChannel())
+                .source(stage.getSource())
+                .activityId(stage.getActivityId())
+                .state(stage.getState())
+                .activityName(stage.getActivityName())
+                .activityDesc(stage.getActivityDesc())
+                .strategyId(stage.getStrategyId())
+                .activityState(stage.getActivityState())
+                .beginDateTime(stage.getBeginDateTime())
+                .endDateTime(stage.getEndDateTime())
+                .build();
     }
 }

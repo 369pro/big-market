@@ -96,10 +96,22 @@ public interface IActivityRepository {
 
     void updateStageActivity2Active(Long id);
 
+    /**
+     * Create or update one activity stage for an exact channel/source pair.
+     *
+     * @param activityId activity ID
+     * @param channel channel
+     * @param source source
+     * @param state active or inactive
+     */
+    void updateStageActivityState(Long activityId, String channel, String source, String state);
+
     Long queryStageActiveBySC(String channel, String source);
 
     List<RaffleActivityStageEntity> queryStageActivityList();
 
     Long queryStageActivity2ActiveById(Long id);
+
+    RaffleActivityStageEntity queryStageActivityById(Long id);
 
 }

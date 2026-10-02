@@ -30,6 +30,12 @@ public interface IRaffleActivityStageService {
     void updateStageActivity2Active(Long id);
 
     /**
+     * Create or update a channel/source stage state. Activation validates the
+     * activity and prepares its caches before publication.
+     */
+    void updateStageActivityState(Long activityId, String channel, String source, String state);
+
+    /**
      * 查询展台活动ID - 一个渠道&来源 sc 值下，只能有一个在线的活动。
      *
      * @param channel 渠道
@@ -41,5 +47,7 @@ public interface IRaffleActivityStageService {
     List<RaffleActivityStageEntity> queryStageActivityList();
 
     Long queryStageActivity2ActiveById(Long id);
+
+    RaffleActivityStageEntity queryStageActivityById(Long id);
 
 }
