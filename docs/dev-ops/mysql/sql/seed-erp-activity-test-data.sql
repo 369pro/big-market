@@ -288,7 +288,7 @@ BEGIN
     INSERT INTO `raffle_activity`
         (`activity_id`, `activity_name`, `activity_desc`, `begin_date_time`,
          `end_date_time`, `strategy_id`, `state`)
-    SELECT 100501, '测试活动-已上架待激活', 'ERP 上架/下架往返测试：有效开放活动',
+    SELECT 100501, '测试活动-上下架演示', 'ERP 上架/下架往返测试：有效开放活动',
            '2026-10-01 00:00:00', '2026-12-31 23:59:59', 100081, 'open'
       FROM DUAL
      WHERE NOT EXISTS (
