@@ -1,0 +1,6 @@
+canal:
+  manager:
+    jdbc:
+      url: jdbc:mysql://host.docker.internal:3306/canal_manager?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+      username: ${LOCAL_MYSQL_USERNAME}
+      password: ${LOCAL_MYSQL_PASSWORD}

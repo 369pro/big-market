@@ -1,0 +1,45 @@
+name: big-market-canal-local
+
+services:
+  canal-server:
+    image: canal/canal-server:v1.1.7
+    container_name: big-market-canal-server-local
+    restart: unless-stopped
+    command: ["sh", "-c", "cp /tmp/instance.properties /home/admin/canal-server/conf/example/instance.properties && exec /home/admin/app.sh"]
+    ports:
+      - "127.0.0.1:11111:11111"
+    volumes:
+      - ./runtime/canal/instance.properties:/tmp/instance.properties:ro
+      - canal-conf:/home/admin/canal-server/conf/example
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 11111"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+      start_period: 10s
+
+  canal-adapter:
+    image: coopersoft/canal-adapter:v1.1.6
+    container_name: big-market-canal-adapter-local
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:18082:8081"
+    env_file:
+      - ../local/mysql.env
+    environment:
+      TZ: Asia/Shanghai
+      JAVA_OPTS: -Xms256m -Xmx512m -XX:MaxDirectMemorySize=128m
+    volumes:
+      - ./adapter/application.yml:/opt/canal-adapter/conf/application.yml:ro
+      - ./adapter/bootstrap.yml:/opt/canal-adapter/conf/bootstrap.yml:ro
+      - ../canal-adapter/es7:/opt/canal-adapter/conf/es7:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      canal-server:
+        condition: service_healthy
+
+volumes:
+  canal-conf:

@@ -1,0 +1,23 @@
+#################################################
+## Local-only Canal Server instance.
+canal.instance.mysql.slaveId=3317
+canal.instance.gtidon=false
+canal.instance.master.address=host.docker.internal:3306
+canal.instance.master.journal.name=
+canal.instance.master.position=
+canal.instance.master.timestamp=
+canal.instance.master.gtid=
+canal.instance.rds.accesskey=
+REDACTED
+canal.instance.rds.instanceId=
+canal.instance.tsdb.enable=false
+canal.instance.dbUsername=__CANAL_USERNAME__
+canal.instance.dbPassword=__CANAL_PASSWORD__
+canal.instance.connectionCharset=UTF-8
+canal.instance.enableDruid=false
+canal.instance.filter.regex=big_market_0[12]\\.user_raffle_order_0(00|01|02|03)
+canal.instance.filter.black.regex=mysql\\.slave_.*
+canal.mq.topic=example
+canal.mq.partition=0
+canal.instance.multi.stream.on=false
+#################################################

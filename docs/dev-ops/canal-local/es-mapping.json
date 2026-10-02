@@ -1,0 +1,21 @@
+{
+  "settings": {
+    "number_of_replicas": 0
+  },
+  "mappings": {
+    "properties": {
+      "_user_id": { "type": "keyword" },
+      "_activity_id": { "type": "long" },
+      "_activity_name": {
+        "type": "text",
+        "fields": { "keyword": { "type": "keyword", "ignore_above": 256 } }
+      },
+      "_strategy_id": { "type": "long" },
+      "_order_id": { "type": "keyword" },
+      "_order_time": { "type": "date", "format": "yyyy-MM-dd HH:mm:ss||strict_date_optional_time||epoch_millis" },
+      "_order_state": { "type": "keyword" },
+      "_create_time": { "type": "date", "format": "yyyy-MM-dd HH:mm:ss||strict_date_optional_time||epoch_millis" },
+      "_update_time": { "type": "date", "format": "yyyy-MM-dd HH:mm:ss||strict_date_optional_time||epoch_millis" }
+    }
+  }
+}
