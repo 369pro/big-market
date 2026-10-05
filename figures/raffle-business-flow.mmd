@@ -1,0 +1,128 @@
+%%{init: {"theme":"base","themeVariables":{"background":"#ffffff","primaryColor":"#ffffff","primaryTextColor":"#111827","primaryBorderColor":"#334155","lineColor":"#334155","secondaryColor":"#f8fafc","tertiaryColor":"#ffffff","clusterBkg":"#f8fafc","clusterBorder":"#94a3b8","edgeLabelBackground":"#ffffff","fontFamily":"Arial, sans-serif"}}}%%
+flowchart TB
+    U["用户调用抽奖接口"] --> C["Controller：参数、降级、限流校验"]
+
+    subgraph P["一、参与活动：同步数据库事务"]
+        P1["校验活动状态与有效期"] --> P2{"存在未使用的抽奖单？"}
+        P2 -- "是" --> P6["复用 create 状态抽奖单"]
+        P2 -- "否" --> P3["检查总 / 月 / 日抽奖额度"]
+        P3 --> P4["同一事务：条件扣减三类额度"]
+        P4 --> P5["插入 user_raffle_order，状态 create"]
+        P5 --> P6
+    end
+
+    C --> P1
+
+    subgraph R["二、抽奖决策与奖品库存扣减"]
+        R1["责任链：黑名单 / 权重 / 默认概率"] --> R2["得到候选 awardId"]
+        R2 --> R2B{"是否为默认概率链路？"}
+        R2B -- "是" --> R3["规则树：次数锁 / 幸运奖 / 库存 / 兜底"]
+        R2B -- "否" --> R9
+        R3 --> R4["Redis Lua 原子执行"]
+        R4 --> R5["DECR 奖品库存"]
+        R5 --> R6{"库存和滑块锁是否有效？"}
+        R6 -- "否" --> R7["恢复库存或返回库存不足，由规则树走兜底"]
+        R6 -- "是" --> R8["Lua同时创建库存同步任务\nRedis outbox：sid:aid:uuid:surplus"]
+        R8 --> R9["返回最终中奖结果"]
+    end
+
+    P6 --> R1
+
+    subgraph S["三、奖品库存异步同步到 DB"]
+        S1["扣减成功后直接发送 RocketMQ\nTopic：strategy_award_stock_deduct\n检查 SendResult"]
+        S2{"SendResult == SEND_OK？"}
+        S3["确认成功：删除库存同步任务"]
+        S4["发送失败：保留库存同步任务"]
+        S5["补偿Task每 5 秒扫描并重发"]
+        S6["RocketMQ库存Topic + consumerGroup"]
+        S7["RocketMQ消费 + 应用聚合\n1秒或500条触发回写"]
+        S8["按 strategyId + awardId 聚合\n保留最小 surplus"]
+        S9["DB：stock = LEAST(stock, surplus)"]
+        S10{"DB同步成功？"}
+        S11["消费成功"]
+        S12["返回 RECONSUME_LATER\nRocketMQ按延迟级别自动重试"]
+        S13["超过重试上限进入 RocketMQ DLQ"]
+        S14["DLQ消费者 XADD\nRedis库存异常Stream"]
+        S15["补偿Task通过Consumer Group读取"]
+        S16["重新执行DB库存同步"]
+        S17{"补偿成功？"}
+        S18["XACK并删除异常记录"]
+        S19["保留Pending\n定时XAUTOCLAIM后重试"]
+
+        S1 --> S2
+        S2 -- "是" --> S3
+        S2 -- "否" --> S4
+        S4 --> S5 --> S1
+        S2 -- "消息进入 Broker" --> S6
+        S6 --> S7 --> S8 --> S9 --> S10
+        S10 -- "是" --> S11
+        S10 -- "否" --> S12
+        S12 -- "超过重试上限" --> S13 --> S14 --> S15 --> S16 --> S17
+        S17 -- "是" --> S18
+        S17 -- "否" --> S19 --> S15
+    end
+
+    R8 -. "立即投递；发送失败由补偿Task重试" .-> S1
+
+    subgraph A["四、中奖记录与异步发奖"]
+        A1["同一 DB 事务"]
+        A2["插入 user_award_record，状态 create"]
+        A3["插入 task 本地消息表，状态 create"]
+        A4["抽奖单 create -> used，条件更新"]
+        A5["事务提交后发送 RocketMQ\nTopic：send_award"]
+        A6{"发送成功？"}
+        A7["task -> completed"]
+        A8["task -> fail"]
+        A9["每 5 秒扫描 create / fail 任务重发"]
+        A10["SendAwardCustomer 消费"]
+        A11["按 awardKey 路由具体发奖实现"]
+        A12{"奖品类型"}
+        A13["积分奖：积分账户变更 +\n中奖记录 create -> completed\n同一事务、条件更新防重复"]
+        A14["外部奖：调用外部发奖接口\n当前实现未回写 completed"]
+
+        A1 --> A2
+        A1 --> A3
+        A1 --> A4
+        A2 --> A5
+        A3 --> A5
+        A4 --> A5
+        A5 --> A6
+        A6 -- "是" --> A7
+        A6 -- "否" --> A8 --> A9 --> A5
+        A5 -. "RocketMQ" .-> A10
+        A10 --> A11 --> A12
+        A12 -- "积分奖" --> A13
+        A12 -- "外部奖" --> A14
+    end
+
+    R9 --> A1
+    A7 --> END["接口返回中奖结果；奖品继续异步到账"]
+    A8 --> END
+
+    GAP["当前一致性缺口：Redis奖品库存扣减成功后，\n若中奖记录事务失败，没有自动回补该次库存"]
+    R8 -. "异常窗口" .-> GAP
+    GAP2["外部发奖缺口：调用成功后若消息重投，\n需要下游按 orderId 幂等；当前代码未展示该保证"]
+    A14 -. "重复消费窗口" .-> GAP2
+    GAP3["库存旁路缺口：权重 / 黑名单责任链接管后\n直接返回奖品，当前不会进入库存扣减节点"]
+    R2B -. "非默认链路" .-> GAP3
+    GAP4["目标约束：仅 SendResult 为 SEND_OK 后\n才把 task 标记 completed"]
+    A7 -. "发送结果校验" .-> GAP4
+
+    classDef input fill:#ECFDF5,stroke:#059669,color:#064E3B,stroke-width:1.5px;
+    classDef sync fill:#EFF6FF,stroke:#2563EB,color:#1E3A8A,stroke-width:1.5px;
+    classDef redis fill:#FFF7ED,stroke:#EA580C,color:#7C2D12,stroke-width:1.5px;
+    classDef mq fill:#F5F3FF,stroke:#7C3AED,color:#4C1D95,stroke-width:1.5px;
+    classDef db fill:#F8FAFC,stroke:#475569,color:#0F172A,stroke-width:1.5px;
+    classDef warn fill:#FEF2F2,stroke:#DC2626,color:#7F1D1D,stroke-width:2px;
+
+    style P fill:#F8FAFC,stroke:#94A3B8,color:#111827,stroke-width:1.5px;
+    style R fill:#F8FAFC,stroke:#94A3B8,color:#111827,stroke-width:1.5px;
+    style S fill:#F8FAFC,stroke:#94A3B8,color:#111827,stroke-width:1.5px;
+    style A fill:#F8FAFC,stroke:#94A3B8,color:#111827,stroke-width:1.5px;
+
+    class U,END input;
+    class C,P1,P2,P3,P4,P5,P6,R1,R2,R2B,R3,R9,A1,A2,A3,A4 sync;
+    class R4,R5,R6,R7,R8,S3,S4,S5,S14,S15,S18,S19 redis;
+    class S1,S2,S6,S7,S8,S11,S12,S13,A5,A6,A7,A8,A9,A10 mq;
+    class S9,S10,S16,S17,A11,A12,A13,A14 db;
+    class GAP,GAP2,GAP3,GAP4 warn;

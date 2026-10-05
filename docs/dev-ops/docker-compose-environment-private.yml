@@ -110,22 +110,41 @@ services:
       redis:
         condition: service_healthy
 
-  # rabbitmq
-  # 账密 admin/admin
-  # rabbitmq-plugins enable rabbitmq_management
-  rabbitmq:
-    image: 116.198.201.187:5000/rabbitmq:3.12.9
-    container_name: rabbitmq
+  rocketmq-namesrv:
+    image: apache/rocketmq:5.3.2
     restart: always
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "9876:9876"
     environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: admin
-    command: rabbitmq-server
+      JAVA_OPT_EXT: "-Xms128m -Xmx128m -Xmn64m"
+    command: sh mqnamesrv
+    networks:
+      - my-network
+
+  rocketmq-broker:
+    image: apache/rocketmq:5.3.2
+    restart: always
+    depends_on:
+      - rocketmq-namesrv
+    ports:
+      - "10909:10909"
+      - "10911:10911"
+    environment:
+      JAVA_OPT_EXT: "-Xms256m -Xmx256m -Xmn128m"
+      ROCKETMQ_BROKER_IP: ${ROCKETMQ_BROKER_IP:-127.0.0.1}
+    command: sh /etc/rocketmq/start-broker.sh
     volumes:
-      - ./rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins
+      - ./rocketmq/broker.conf:/etc/rocketmq/broker.conf:ro
+      - ./rocketmq/start-broker.sh:/etc/rocketmq/start-broker.sh:ro
+      - ./rocketmq/init-topics.sh:/etc/rocketmq/init-topics.sh:ro
+      - ./rocketmq/store:/home/rocketmq/store
+    healthcheck:
+      test: ["CMD-SHELL", "sh mqadmin clusterList -n rocketmq-namesrv:9876 | grep -q big-market-broker"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+    networks:
+      - my-network
 
   zookeeper:
     image: 116.198.201.187:5000/zookeeper:3.9.0

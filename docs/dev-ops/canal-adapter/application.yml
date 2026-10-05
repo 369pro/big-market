@@ -7,7 +7,7 @@ spring:
     default-property-inclusion: non_null
 
 canal.conf:
-  mode: tcp #tcp kafka rocketMQ rabbitMQ
+  mode: tcp # tcp transport; independent of the business RocketMQ topics
   flatMessage: true
   zookeeperHosts:
   syncBatchSize: 1000

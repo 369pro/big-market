@@ -37,4 +37,7 @@ build/
 ### Mac OS ###
 .DS_Store
 /data/
+/docs/dev-ops/rocketmq/store/
+/docs/dev-ops/local/artifacts/
+/docs/dev-ops/local/mysql.env
 /.idea/

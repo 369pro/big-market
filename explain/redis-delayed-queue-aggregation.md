@@ -7,15 +7,15 @@
                     ──────────────                      ──────────────────
 热路径：    Lua 脚本 (decr+锁+MQ outbox)         decr + setNx + 延迟队列 offer
                  ↓                                        ↓
-异步回写：   RabbitMQ 批量消费 → 幂等同步库存       延迟队列 drainTo → count → UPDATE -count
+异步回写：   RocketMQ 批量消费 → 幂等同步库存       延迟队列 drainTo → count → UPDATE -count
 ```
 
-- **奖品库存**：Lua 原子脚本 + Redis outbox → RabbitMQ 批量消费
+- **奖品库存**：Lua 原子脚本 + Redis outbox → RocketMQ 批量消费
 - **活动库存**：原有 decr + setNx + 延迟队列 → drainTo 批量（保持不动）
 
 ---
 
-## 一、奖品侧：Lua 脚本 + RabbitMQ 批量消费
+## 一、奖品侧：Lua 脚本 + RocketMQ 批量消费
 
 ### 问题
 
@@ -58,13 +58,13 @@ stock_deduction.lua
 | `DefaultRaffleStrategy.java` | 委托实现 |
 | `IStrategyAwardDao.java` | 新增幂等库存快照同步 |
 | `strategy_award_mapper.xml` | 新增 `LEAST` 库存同步 SQL |
-| `StrategyAwardStockDeductCustomer.java` | RabbitMQ 批量消费并聚合库存快照 |
+| `StrategyAwardStockDeductCustomer.java` | RocketMQ 批量消费并聚合库存快照 |
 | `UpdateAwardStockJob.java` | MQ outbox 失败补偿投递 |
 
 ### MQ 批量消费逻辑
 
 ```sql
--- 最多 500 条或等待 1 秒形成一批；同一奖品取最小 surplus。
+-- 累计 500 条或等待 1 秒触发聚合；同一奖品取最小 surplus。
 UPDATE strategy_award
 SET award_count_surplus = LEAST(award_count_surplus, #{surplus})
 WHERE strategy_id = #{strategyId} AND award_id = #{awardId};

@@ -19,6 +19,7 @@ services:
       - SPRING_HIKARI_POOL_NAME=Retail_HikariCP
       - REDIS_SDK_CONFIG_HOST=redis
       - REDIS_SDK_CONFIG_PORT=6379
+      - ROCKETMQ_NAMESRV_ADDR=rocketmq-namesrv:9876
     volumes:
       - ./log:/data/log
     networks:

@@ -1,0 +1,184 @@
+name: llm-market-local
+
+services:
+  redis:
+    image: redis:7.4-alpine
+    command: redis-server --requirepass 123456 --appendonly yes
+    ports:
+      - "127.0.0.1:16379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=123456 redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  nacos:
+    image: nacos/nacos-server:v2.2.3-slim
+    environment:
+      MODE: standalone
+      PREFER_HOST_MODE: hostname
+      JVM_XMS: 256m
+      JVM_XMX: 256m
+      JVM_XMN: 128m
+      NACOS_AUTH_ENABLE: "false"
+    ports:
+      - "127.0.0.1:8848:8848"
+      - "127.0.0.1:9848:9848"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8848/nacos/v1/console/health/readiness >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+
+  elasticsearch:
+    image: elasticsearch:7.17.14
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "127.0.0.1:9200:9200"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS 'http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=2s' >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+
+  rocketmq-namesrv:
+    image: apache/rocketmq:5.3.2
+    environment:
+      JAVA_OPT_EXT: "-Xms128m -Xmx128m -Xmn64m"
+    command: sh mqnamesrv
+    ports:
+      - "127.0.0.1:9876:9876"
+
+  rocketmq-storage-init:
+    image: apache/rocketmq:5.3.2
+    user: "0:0"
+    command: ["sh", "-c", "chown rocketmq:rocketmq /home/rocketmq/store"]
+    volumes:
+      - rocketmq-data:/home/rocketmq/store
+
+  rocketmq-broker:
+    image: apache/rocketmq:5.3.2
+    environment:
+      JAVA_OPT_EXT: "-Xms256m -Xmx256m -Xmn128m"
+      ROCKETMQ_BROKER_IP: rocketmq-broker
+    command: sh /etc/rocketmq/start-broker.sh
+    depends_on:
+      rocketmq-namesrv:
+        condition: service_started
+      rocketmq-storage-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./rocketmq/broker.conf:/etc/rocketmq/broker.conf:ro
+      - ./rocketmq/start-broker.sh:/etc/rocketmq/start-broker.sh:ro
+      - rocketmq-data:/home/rocketmq/store
+    healthcheck:
+      test: ["CMD-SHELL", "sh mqadmin clusterList -n rocketmq-namesrv:9876 | grep -q big-market-broker"]
+      interval: 10s
+      timeout: 10s
+      retries: 18
+
+  rocketmq-init:
+    image: apache/rocketmq:5.3.2
+    command: sh /etc/rocketmq/init-topics.sh
+    volumes:
+      - ./rocketmq/init-topics.sh:/etc/rocketmq/init-topics.sh:ro
+    depends_on:
+      rocketmq-broker:
+        condition: service_healthy
+
+  big-market:
+    image: eclipse-temurin:17-jre
+    working_dir: /app
+    env_file: ./local/mysql.env
+    command: ["java", "-Xms128m", "-Xmx512m", "-jar", "/app/big-market-app.jar"]
+    environment:
+      TZ: Asia/Shanghai
+      SPRING_CONFIG_ADDITIONAL_LOCATION: file:/config/
+      SPRING_PROFILES_ACTIVE: dev,local
+    ports:
+      - "127.0.0.1:8092:8092"
+      - "127.0.0.1:8098:8092"
+    volumes:
+      - ../../big-market-app/target/big-market-app.jar:/app/big-market-app.jar:ro
+      - ./local/application-local.yml:/config/application-local.yml:ro
+      - ./local/logback-local.xml:/config/logback-local.xml:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      rocketmq-init:
+        condition: service_completed_successfully
+
+  chatgpt-data:
+    image: eclipse-temurin:17-jre
+    working_dir: /app
+    env_file: ./local/mysql.env
+    command: ["java", "-Xms128m", "-Xmx512m", "-jar", "/app/chatgpt-data-app.jar"]
+    environment:
+      TZ: Asia/Shanghai
+      SPRING_CONFIG_ADDITIONAL_LOCATION: file:/config/
+      SPRING_PROFILES_ACTIVE: dev,local
+    ports:
+      - "127.0.0.1:8091:8091"
+    volumes:
+      - ./local/artifacts/chatgpt-data-app.jar:/app/chatgpt-data-app.jar:ro
+      - ./local/chatgpt-local.yml:/config/application-local.yml:ro
+      - ./local/logback-local.xml:/config/logback-local.xml:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+      big-market:
+        condition: service_started
+
+  chatgpt-web:
+    image: node:20-bookworm-slim
+    working_dir: /app
+    command: ["sh", "/startup/start-frontend.sh", "chat"]
+    environment:
+      NEXT_TELEMETRY_DISABLED: "1"
+      NODE_OPTIONS: --max-old-space-size=1536
+      NEXT_PUBLIC_API_HOST_URL: http://127.0.0.1:8091
+    ports:
+      - "127.0.0.1:3002:3002"
+    volumes:
+      - ../../../chatgpt-web:/source:ro
+      - ./local/start-frontend.sh:/startup/start-frontend.sh:ro
+      - chat-web-work:/app
+      - npm-cache:/root/.npm
+
+  big-market-erp:
+    image: node:20-bookworm-slim
+    working_dir: /app
+    command: ["sh", "/startup/start-frontend.sh", "erp"]
+    environment:
+      PORT: "8000"
+      HOST: 0.0.0.0
+      BROWSER: none
+      NODE_OPTIONS: "--max-old-space-size=1536"
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ../../../big-market-erp:/source:ro
+      - ./local/start-frontend.sh:/startup/start-frontend.sh:ro
+      - erp-work:/app
+      - npm-cache:/root/.npm
+
+volumes:
+  redis-data:
+  elasticsearch-data:
+  rocketmq-data:
+  chat-web-work:
+  erp-work:
+  npm-cache:

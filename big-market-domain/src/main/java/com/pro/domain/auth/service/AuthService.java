@@ -13,9 +13,13 @@ import org.springframework.stereotype.Service;
 @Service
 public class AuthService extends AbstractAuthService {
 
+    @javax.annotation.Resource
+    private com.pro.domain.auth.repository.IAuthSessionRepository authSessionRepository;
+
     @Override
     public boolean checkToken(String token) {
-        return isVerify(token);
+        return token != null && isVerify(token)
+                && openid(token).equals(authSessionRepository.queryTokenUserId(token));
     }
 
     @Override

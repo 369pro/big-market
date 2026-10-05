@@ -1,0 +1,44 @@
+server:
+  port: 8092
+
+spring:
+  elasticsearch:
+    datasource:
+      url: jdbc:es://http://elasticsearch:9200
+
+mini-db-router:
+  jdbc:
+    datasource:
+      db00:
+        url: jdbc:mysql://host.docker.internal:3306/big_market?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+        username: ${LOCAL_MYSQL_USERNAME:root}
+        password: ${LOCAL_MYSQL_PASSWORD}
+      db01:
+        url: jdbc:mysql://host.docker.internal:3306/big_market_01?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+        username: ${LOCAL_MYSQL_USERNAME:root}
+        password: ${LOCAL_MYSQL_PASSWORD}
+      db02:
+        url: jdbc:mysql://host.docker.internal:3306/big_market_02?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+        username: ${LOCAL_MYSQL_USERNAME:root}
+        password: ${LOCAL_MYSQL_PASSWORD}
+
+redis:
+  sdk:
+    config:
+      host: redis
+      port: 6379
+      password: "123456"
+
+dubbo:
+  registry:
+    address: nacos://nacos:8848
+
+rocketmq:
+  name-server: rocketmq-namesrv:9876
+
+gateway:
+  config:
+    apiHost: http://host.docker.internal:8093/
+
+logging:
+  config: file:/config/logback-local.xml
