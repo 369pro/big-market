@@ -41,10 +41,20 @@ public abstract class AbstractRaffleActivityAccountQuota extends RaffleActivityA
     @Override
     public UnpaidActivityOrderEntity createOrder(SkuRechargeEntity skuRechargeEntity) {
         // 1. 参数校验
+        if (skuRechargeEntity == null) {
+            throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), ResponseCode.ILLEGAL_PARAMETER.getInfo());
+        }
         String userId = skuRechargeEntity.getUserId();
         Long sku = skuRechargeEntity.getSku();
         String outBusinessNo = skuRechargeEntity.getOutBusinessNo();
-        if (null == sku || StringUtils.isBlank(userId) || StringUtils.isBlank(outBusinessNo)) {
+        OrderTradeTypeVO orderTradeType = skuRechargeEntity.getOrderTradeType();
+        if (null == sku || StringUtils.isBlank(userId) || StringUtils.isBlank(outBusinessNo)
+                || orderTradeType == null) {
+            throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), ResponseCode.ILLEGAL_PARAMETER.getInfo());
+        }
+
+        ITradePolicy tradePolicy = tradePolicyGroup.get(orderTradeType.getCode());
+        if (tradePolicy == null) {
             throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), ResponseCode.ILLEGAL_PARAMETER.getInfo());
         }
 
@@ -53,22 +63,30 @@ public abstract class AbstractRaffleActivityAccountQuota extends RaffleActivityA
         // 2. 查询基础信息
         // 3.1 查询基础信息「sku、活动、次数」
         ActivitySkuEntity activitySkuEntity = queryActivitySku(sku);
+        if (activitySkuEntity == null) {
+            throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), ResponseCode.ILLEGAL_PARAMETER.getInfo());
+        }
         // 3.2 查询活动信息
         ActivityEntity activityEntity = queryRaffleActivityByActivityId(activitySkuEntity.getActivityId());
+        if (activityEntity == null) {
+            throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), ResponseCode.ILLEGAL_PARAMETER.getInfo());
+        }
         // 3.3 查询次数信息（用户在活动上可参与的次数）
-        ActivityCountEntity activityCountEntity = queryRaffleActivityCountByActivityCountId(activitySkuEntity.getActivityCountId());
+        QuotaPlanEntity quotaPlanEntity = queryRaffleQuotaPlanByQuotaPlanId(activitySkuEntity.getQuotaPlanId());
+        if (quotaPlanEntity == null) {
+            throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), ResponseCode.ILLEGAL_PARAMETER.getInfo());
+        }
 
         // 4. 活动动作规则校验 「过滤失败则直接抛异常」
         IActionChain actionChain = defaultActivityChainFactory.openActionChain();
         String reservationId = org.apache.commons.codec.digest.DigestUtils.sha256Hex(userId + "\0" + outBusinessNo);
-        actionChain.action(activitySkuEntity, activityEntity, activityCountEntity, reservationId);
+        actionChain.action(activitySkuEntity, activityEntity, quotaPlanEntity, reservationId);
 
         // 5. 构建订单聚合对象
-        CreateQuotaOrderAggregate createOrderAggregate = buildOrderAggregate(skuRechargeEntity, activitySkuEntity, activityEntity, activityCountEntity);
+        CreateQuotaOrderAggregate createOrderAggregate = buildOrderAggregate(skuRechargeEntity, activitySkuEntity, activityEntity, quotaPlanEntity);
 
         // 6. 保存订单
         // doSaveOrder(createOrderAggregate);
-        ITradePolicy tradePolicy = tradePolicyGroup.get(skuRechargeEntity.getOrderTradeType().getCode());
         try {
             tradePolicy.trade(createOrderAggregate);
         } catch (AppException e) {
@@ -88,6 +106,6 @@ public abstract class AbstractRaffleActivityAccountQuota extends RaffleActivityA
     }
 
     protected abstract CreateQuotaOrderAggregate buildOrderAggregate(SkuRechargeEntity skuRechargeEntity, ActivitySkuEntity
-            activitySkuEntity, ActivityEntity activityEntity, ActivityCountEntity activityCountEntity);
+            activitySkuEntity, ActivityEntity activityEntity, QuotaPlanEntity quotaPlanEntity);
 
 }

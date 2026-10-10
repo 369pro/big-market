@@ -37,15 +37,30 @@ public class ActivityQuotaIdempotencyTest {
         UnpaidActivityOrderEntity winner = UnpaidActivityOrderEntity.builder().orderId("winner").build();
         when(repository.queryActivityOrder(request)).thenReturn(null, winner);
         when(repository.queryActivitySku(9901L)).thenReturn(ActivitySkuEntity.builder()
-                .sku(9901L).activityId(1L).activityCountId(2L).productAmount(BigDecimal.ONE).build());
+                .sku(9901L).activityId(1L).quotaPlanId(2L).productAmount(BigDecimal.ONE).build());
         when(repository.queryRaffleActivityByActivityId(1L)).thenReturn(ActivityEntity.builder().activityId(1L).build());
-        when(repository.queryRaffleActivityCountByActivityCountId(2L)).thenReturn(ActivityCountEntity.builder()
+        when(repository.queryRaffleQuotaPlanByQuotaPlanId(2L)).thenReturn(QuotaPlanEntity.builder()
                 .totalCount(1).dayCount(1).monthCount(1).build());
         IActionChain chain = mock(IActionChain.class);
         when(factory.openActionChain()).thenReturn(chain);
         doThrow(new AppException(ResponseCode.INDEX_DUP.getCode())).when(policy).trade(any());
         assertSame(winner, service.createOrder(request));
         verify(chain).action(any(), any(), any(), eq(org.apache.commons.codec.digest.DigestUtils.sha256Hex("u\0business")));
+    }
+
+    @Test
+    public void missingTradeTypeIsRejectedBeforeStockReservation() {
+        SkuRechargeEntity request = request();
+        request.setOrderTradeType(null);
+
+        try {
+            service.createOrder(request);
+            fail("expected illegal trade type");
+        } catch (AppException expected) {
+            assertEquals(ResponseCode.ILLEGAL_PARAMETER.getCode(), expected.getCode());
+        }
+
+        verifyNoInteractions(repository, factory, policy);
     }
 
     private SkuRechargeEntity request() {

@@ -9,7 +9,7 @@ import com.pro.domain.activity.model.valobj.UserRaffleOrderStateVO;
 import com.pro.domain.activity.service.IRaffleActivityAccountQuotaService;
 import com.pro.domain.activity.service.IRaffleActivityPartakeService;
 import com.pro.domain.activity.service.IRaffleActivitySkuProductService;
-import com.pro.domain.activity.service.IRaffleActivityStageService;
+import com.pro.domain.activity.service.IRaffleActivityListingService;
 import com.pro.domain.activity.service.armory.IActivityArmory;
 import com.pro.domain.auth.service.IAuthService;
 import com.pro.domain.award.model.entity.UserAwardRecordEntity;
@@ -99,7 +99,7 @@ public class RaffleActivityController implements IRaffleActivityService {
     @Resource
     private IAuthService authService;
     @Resource
-    private IRaffleActivityStageService raffleActivityStageService;
+    private IRaffleActivityListingService raffleActivityListingService;
     @Resource
     private IRedisService redisService;
     @Resource
@@ -113,7 +113,7 @@ public class RaffleActivityController implements IRaffleActivityService {
     @Override
     public Response<Long> queryStageActivityId(@RequestParam String channel, @RequestParam String source) {
         try {
-            Long activityId = raffleActivityStageService.queryStageActivityId(channel, source);
+            Long activityId = raffleActivityListingService.queryStageActivityId(channel, source);
             log.info("查询上架活动ID channel:{} source:{} activity:{}", channel, source, activityId);
             return Response.<Long>builder()
                     .code(ResponseCode.SUCCESS.getCode())
@@ -183,6 +183,13 @@ public class RaffleActivityController implements IRaffleActivityService {
                         .build();
             }
 
+            if (request == null) {
+                return Response.<ActivityDrawResponseDTO>builder()
+                        .code(ResponseCode.ILLEGAL_PARAMETER.getCode())
+                        .info(ResponseCode.ILLEGAL_PARAMETER.getInfo())
+                        .build();
+            }
+
             // 2. Token 解析
             String openid = authService.openid(token);
             assert null != openid;
@@ -193,7 +200,8 @@ public class RaffleActivityController implements IRaffleActivityService {
             // 3. 执行抽奖
             return draw(request);
         } catch (Exception e) {
-            log.error("活动抽奖失败 userId:{} activityId:{}", request.getUserId(), request.getActivityId(), e);
+            log.error("活动抽奖失败 userId:{} activityId:{}", request == null ? null : request.getUserId(),
+                    request == null ? null : request.getActivityId(), e);
             return Response.<ActivityDrawResponseDTO>builder()
                     .code(ResponseCode.UN_ERROR.getCode())
                     .info(ResponseCode.UN_ERROR.getInfo())
@@ -699,7 +707,7 @@ public class RaffleActivityController implements IRaffleActivityService {
                 SkuProductResponseDTO skuProductResponseDTO = new SkuProductResponseDTO();
                 skuProductResponseDTO.setSku(skuProductEntity.getSku());
                 skuProductResponseDTO.setActivityId(skuProductEntity.getActivityId());
-                skuProductResponseDTO.setActivityCountId(skuProductEntity.getActivityCountId());
+                skuProductResponseDTO.setQuotaPlanId(skuProductEntity.getQuotaPlanId());
                 skuProductResponseDTO.setStockCount(skuProductEntity.getStockCount());
                 skuProductResponseDTO.setStockCountSurplus(skuProductEntity.getStockCountSurplus());
                 skuProductResponseDTO.setProductAmount(skuProductEntity.getProductAmount());
@@ -788,6 +796,13 @@ public class RaffleActivityController implements IRaffleActivityService {
                         .build();
             }
 
+            if (request == null) {
+                return Response.<Boolean>builder()
+                        .code(ResponseCode.ILLEGAL_PARAMETER.getCode())
+                        .info(ResponseCode.ILLEGAL_PARAMETER.getInfo())
+                        .build();
+            }
+
             // 2. Token 解析
             String openid = authService.openid(token);
             assert null != openid;
@@ -810,6 +825,9 @@ public class RaffleActivityController implements IRaffleActivityService {
     @Override
     public Response<Boolean> creditPayExchangeSku(@RequestBody SkuProductShopCartRequestDTO request) {
         try {
+            if (request == null) {
+                throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), ResponseCode.ILLEGAL_PARAMETER.getInfo());
+            }
             log.info("积分兑换商品开始 userId:{} sku:{}", request.getUserId(), request.getSku());
             // 0. 参数校验
             if (StringUtils.isBlank(request.getUserId()) || null == request.getSku()) {
@@ -842,13 +860,15 @@ public class RaffleActivityController implements IRaffleActivityService {
                     .data(true)
                     .build();
         } catch (AppException e) {
-            log.error("积分兑换商品失败 userId:{} activityId:{}", request.getUserId(), request.getSku(), e);
+            log.error("积分兑换商品失败 userId:{} activityId:{}", request == null ? null : request.getUserId(),
+                    request == null ? null : request.getSku(), e);
             return Response.<Boolean>builder()
                     .code(e.getCode())
                     .info(e.getInfo())
                     .build();
         } catch (Exception e) {
-            log.error("积分兑换商品失败 userId:{} sku:{}", request.getUserId(), request.getSku(), e);
+            log.error("积分兑换商品失败 userId:{} sku:{}", request == null ? null : request.getUserId(),
+                    request == null ? null : request.getSku(), e);
             return Response.<Boolean>builder()
                     .code(ResponseCode.UN_ERROR.getCode())
                     .info(ResponseCode.UN_ERROR.getInfo())

@@ -34,8 +34,11 @@ public class BehaviorRebateService implements IBehaviorRebateService{
     public List<String> createOrder(BehaviorEntity behaviorEntity) {
         if (behaviorEntity == null || behaviorEntity.getBehaviorTypeVO() == null
                 || org.apache.commons.lang3.StringUtils.isBlank(behaviorEntity.getUserId())
-                || "null".equals(behaviorEntity.getUserId())
-                || org.apache.commons.lang3.StringUtils.isBlank(behaviorEntity.getOutBusinessNo())) {
+                || "null".equalsIgnoreCase(behaviorEntity.getUserId())
+                || behaviorEntity.getUserId().length() > 128
+                || org.apache.commons.lang3.StringUtils.isBlank(behaviorEntity.getOutBusinessNo())
+                || "null".equalsIgnoreCase(behaviorEntity.getOutBusinessNo())
+                || behaviorEntity.getOutBusinessNo().length() > 128) {
             throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), "Invalid rebate business key");
         }
         List<String> previous = previousOrders(behaviorEntity);

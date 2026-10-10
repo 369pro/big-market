@@ -1,10 +1,10 @@
 package com.pro.domain.activity.service.stage;
 
-import com.pro.domain.activity.model.entity.RaffleActivityStageEntity;
+import com.pro.domain.activity.model.entity.RaffleActivityListingEntity;
 import com.pro.domain.activity.model.entity.ActivityEntity;
 import com.pro.domain.activity.model.valobj.ActivityStateVO;
 import com.pro.domain.activity.repository.IActivityRepository;
-import com.pro.domain.activity.service.IRaffleActivityStageService;
+import com.pro.domain.activity.service.IRaffleActivityListingService;
 import com.pro.domain.activity.service.armory.IActivityArmory;
 import com.pro.domain.strategy.service.armory.IStrategyArmory;
 import com.pro.types.enums.ResponseCode;
@@ -22,7 +22,7 @@ import java.util.Locale;
  * @create 2024-10-26 17:52
  */
 @Service
-public class RaffleActivityStageService implements IRaffleActivityStageService {
+public class RaffleActivityListingService implements IRaffleActivityListingService {
 
     @Resource
     private IActivityRepository repository;
@@ -38,7 +38,7 @@ public class RaffleActivityStageService implements IRaffleActivityStageService {
 
     @Override
     public void updateStageActivity2Active(Long id) {
-        RaffleActivityStageEntity stage = queryStageActivityById(id);
+        RaffleActivityListingEntity stage = queryStageActivityById(id);
         if (stage == null || stage.getActivityId() == null) {
             throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), "上架记录不存在: " + id);
         }
@@ -79,7 +79,7 @@ public class RaffleActivityStageService implements IRaffleActivityStageService {
     }
 
     @Override
-    public List<RaffleActivityStageEntity> queryStageActivityList() {
+    public List<RaffleActivityListingEntity> queryStageActivityList() {
         return repository.queryStageActivityList();
     }
 
@@ -89,7 +89,7 @@ public class RaffleActivityStageService implements IRaffleActivityStageService {
     }
 
     @Override
-    public RaffleActivityStageEntity queryStageActivityById(Long id) {
+    public RaffleActivityListingEntity queryStageActivityById(Long id) {
         return repository.queryStageActivityById(id);
     }
 

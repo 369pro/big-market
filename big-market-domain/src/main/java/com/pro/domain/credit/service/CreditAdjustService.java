@@ -11,6 +11,7 @@ import com.pro.domain.credit.repository.ICreditRepository;
 import com.pro.types.enums.ResponseCode;
 import com.pro.types.event.BaseEvent;
 import com.pro.types.exception.AppException;
+import org.apache.commons.lang3.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -31,15 +32,11 @@ public class CreditAdjustService implements ICreditAdjustService{
 
     @Override
     public String createOrder(TradeEntity tradeEntity) {
+        validateTrade(tradeEntity);
 //        CreditAccountEntity creditAccountEntity = CreditAccountEntity.builder()
 //                .userId(tradeEntity.getUserId())
 //                .adjustAmount(tradeEntity.getAmount()).build();
         log.info("增加账户积分额度开始 userId:{} tradeName:{} amount:{}", tradeEntity.getUserId(), tradeEntity.getTradeName(), tradeEntity.getAmount());
-        if (tradeEntity.getAmount() == null || tradeEntity.getTradeType() == null
-                || (TradeTypeVO.REVERSE.equals(tradeEntity.getTradeType()) && tradeEntity.getAmount().signum() >= 0)
-                || (TradeTypeVO.FORWARD.equals(tradeEntity.getTradeType()) && tradeEntity.getAmount().signum() <= 0)) {
-            throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), "Invalid credit trade amount");
-        }
         // Balance sufficiency is checked atomically in the database, after duplicate detection.
         // 1. 创建账户积分实体
         CreditAccountEntity creditAccountEntity = TradeAggregate.createCreditAccountEntity(
@@ -79,5 +76,23 @@ public class CreditAdjustService implements ICreditAdjustService{
     @Override
     public CreditAccountEntity queryUserCreditAccount(String userId) {
         return creditRepository.queryUserCreditAccount(userId);
+    }
+
+    private void validateTrade(TradeEntity tradeEntity) {
+        if (tradeEntity == null
+                || StringUtils.isBlank(tradeEntity.getUserId())
+                || "null".equalsIgnoreCase(tradeEntity.getUserId())
+                || tradeEntity.getUserId().length() > 128
+                || tradeEntity.getTradeName() == null
+                || tradeEntity.getTradeType() == null
+                || StringUtils.isBlank(tradeEntity.getOutBusinessNo())
+                || "null".equalsIgnoreCase(tradeEntity.getOutBusinessNo())
+                || tradeEntity.getOutBusinessNo().length() > 64
+                || tradeEntity.getAmount() == null
+                || tradeEntity.getAmount().stripTrailingZeros().scale() > 2
+                || (TradeTypeVO.REVERSE.equals(tradeEntity.getTradeType()) && tradeEntity.getAmount().signum() >= 0)
+                || (TradeTypeVO.FORWARD.equals(tradeEntity.getTradeType()) && tradeEntity.getAmount().signum() <= 0)) {
+            throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), "Invalid credit trade");
+        }
     }
 }

@@ -9,6 +9,7 @@ import com.pro.types.enums.ResponseCode;
 import com.pro.types.event.BaseEvent;
 import com.pro.types.exception.AppException;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -34,7 +35,10 @@ public class CreditAdjustSuccessCustomer {
             BaseEvent.EventMessage<CreditAdjustSuccessMessageEvent.CreditAdjustSuccessMessage> eventMessage = JSON.parseObject(message, new TypeReference<BaseEvent.EventMessage<CreditAdjustSuccessMessageEvent.CreditAdjustSuccessMessage>>() {
             }.getType());
             CreditAdjustSuccessMessageEvent.CreditAdjustSuccessMessage creditAdjustSuccessMessage = eventMessage.getData();
-            if (creditAdjustSuccessMessage == null || creditAdjustSuccessMessage.getAmount() == null) {
+            if (creditAdjustSuccessMessage == null
+                    || creditAdjustSuccessMessage.getAmount() == null
+                    || StringUtils.isBlank(creditAdjustSuccessMessage.getUserId())
+                    || StringUtils.isBlank(creditAdjustSuccessMessage.getOutBusinessNo())) {
                 throw new IllegalArgumentException("Missing credit adjustment payload");
             }
             // Positive rebate/award credits are not payments for an activity order.

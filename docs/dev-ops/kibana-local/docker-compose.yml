@@ -1,4 +1,4 @@
-name: llm-market-tools
+name: kibnan
 
 services:
   kibana:

@@ -1,6 +1,6 @@
 package com.pro.domain.activity.service.quota.rule.impl;
 
-import com.pro.domain.activity.model.entity.ActivityCountEntity;
+import com.pro.domain.activity.model.entity.QuotaPlanEntity;
 import com.pro.domain.activity.model.entity.ActivityEntity;
 import com.pro.domain.activity.model.entity.ActivitySkuEntity;
 import com.pro.domain.activity.model.valobj.ActivitySkuStockKeyVO;
@@ -28,7 +28,7 @@ public class ActivitySkuStockActionChain extends AbstractActionChain {
     private IActivityRepository activityRepository;
 
     @Override
-    public boolean action(ActivitySkuEntity sku, ActivityEntity activity, ActivityCountEntity count, String reservationId) {
+    public boolean action(ActivitySkuEntity sku, ActivityEntity activity, QuotaPlanEntity count, String reservationId) {
         if (reservationId == null) return action(sku, activity, count);
         if (!activityRepository.reserveActivitySkuStock(sku.getSku(), reservationId, activity.getEndDateTime())) {
             throw new AppException(ResponseCode.ACTIVITY_SKU_STOCK_ERROR.getCode(), ResponseCode.ACTIVITY_SKU_STOCK_ERROR.getInfo());
@@ -41,11 +41,11 @@ public class ActivitySkuStockActionChain extends AbstractActionChain {
      */
     @Override
     public boolean action(ActivitySkuEntity activitySkuEntity, ActivityEntity activityEntity,
-                          ActivityCountEntity activityCountEntity) {
+                          QuotaPlanEntity quotaPlanEntity) {
         log.info("活动责任链-商品库存处理【有效期、状态、库存(sku)】开始。sku:{} activityId:{}",
                 activitySkuEntity.getSku(),
                 activityEntity.getActivityId());
-        // 扣减【活动库存】 raffle_activity_sku, note RDS扣减
+        // 扣减【活动库存】 raffle_quota_product, note RDS扣减
         boolean ststus = activityDispatch.subtractionActivitySkuStock(activitySkuEntity.getSku(), activityEntity.getEndDateTime());
         if(!ststus){
             throw new AppException(ResponseCode.ACTIVITY_SKU_STOCK_ERROR.getCode(), ResponseCode.ACTIVITY_SKU_STOCK_ERROR.getInfo());

@@ -1,7 +1,7 @@
 package com.pro.domain.activity.service.quota.rule;
 
 
-import com.pro.domain.activity.model.entity.ActivityCountEntity;
+import com.pro.domain.activity.model.entity.QuotaPlanEntity;
 import com.pro.domain.activity.model.entity.ActivityEntity;
 import com.pro.domain.activity.model.entity.ActivitySkuEntity;
 
@@ -12,9 +12,9 @@ import com.pro.domain.activity.model.entity.ActivitySkuEntity;
  */
 public interface IActionChain extends IActionChainArmory {
 
-    boolean action(ActivitySkuEntity activitySkuEntity, ActivityEntity activityEntity, ActivityCountEntity activityCountEntity);
+    boolean action(ActivitySkuEntity activitySkuEntity, ActivityEntity activityEntity, QuotaPlanEntity quotaPlanEntity);
 
-    default boolean action(ActivitySkuEntity sku, ActivityEntity activity, ActivityCountEntity count, String reservationId) {
+    default boolean action(ActivitySkuEntity sku, ActivityEntity activity, QuotaPlanEntity count, String reservationId) {
         return action(sku, activity, count);
     }
 

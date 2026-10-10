@@ -27,9 +27,9 @@ public class SkuProductEntity {
      */
     private Long activityId;
     /**
-     * 活动个人参与次数ID
+     * 抽奖次数套餐业务编号（非用户已参与次数）
      */
-    private Long activityCountId;
+    private Long quotaPlanId;
     /**
      * 库存总量
      */

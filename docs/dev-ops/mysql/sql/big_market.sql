@@ -106,22 +106,22 @@ UNLOCK TABLES;
 DROP TABLE IF EXISTS `raffle_activity`;
 
 CREATE TABLE `raffle_activity` (
-  `id` bigint(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
-  `activity_id` bigint(12) NOT NULL COMMENT '活动ID',
-  `activity_name` varchar(64) NOT NULL COMMENT '活动名称',
-  `activity_desc` varchar(128) NOT NULL COMMENT '活动描述',
-  `begin_date_time` datetime NOT NULL COMMENT '开始时间',
-  `end_date_time` datetime NOT NULL COMMENT '结束时间',
-  `strategy_id` bigint(8) NOT NULL COMMENT '抽奖策略ID',
-  `state` varchar(8) NOT NULL DEFAULT 'create' COMMENT '活动状态',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `id` bigint(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '数据库自增主键；不是活动业务编号',
+  `activity_id` bigint(12) NOT NULL COMMENT '活动业务编号；商品、上架配置和参与账户关联此编号',
+  `activity_name` varchar(64) NOT NULL COMMENT '抽奖活动名称；用于用户端和运营端展示',
+  `activity_desc` varchar(128) NOT NULL COMMENT '抽奖活动说明',
+  `begin_date_time` datetime NOT NULL COMMENT '活动有效期开始时间；参与资格校验使用',
+  `end_date_time` datetime NOT NULL COMMENT '活动有效期结束时间；不等于渠道下架时间',
+  `strategy_id` bigint(8) NOT NULL COMMENT '抽奖策略业务编号；关联奖池、概率和抽奖规则',
+  `state` varchar(8) NOT NULL DEFAULT 'create' COMMENT '活动开放状态：create创建、open开启、close关闭；与渠道上下架独立',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '配置记录创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '配置记录最后更新时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_activity_id` (`activity_id`),
   UNIQUE KEY `uq_strategy_id` (`strategy_id`),
   KEY `idx_begin_date_time` (`begin_date_time`),
   KEY `idx_end_date_time` (`end_date_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='抽奖活动表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='抽奖活动：名称、有效期、开放状态和抽奖策略';
 
 LOCK TABLES `raffle_activity` WRITE;
 /*!40000 ALTER TABLE `raffle_activity` DISABLE KEYS */;
@@ -135,27 +135,27 @@ VALUES
 UNLOCK TABLES;
 
 
-# 转储表 raffle_activity_count
+# 转储表 raffle_quota_plan
 # ------------------------------------------------------------
 
-DROP TABLE IF EXISTS `raffle_activity_count`;
+DROP TABLE IF EXISTS `raffle_quota_plan`;
 
-CREATE TABLE `raffle_activity_count` (
-  `id` bigint(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
-  `activity_count_id` bigint(12) NOT NULL COMMENT '活动次数编号',
-  `total_count` int(8) NOT NULL COMMENT '总次数',
-  `day_count` int(8) NOT NULL COMMENT '日次数',
-  `month_count` int(8) NOT NULL COMMENT '月次数',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+CREATE TABLE `raffle_quota_plan` (
+  `id` bigint(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '数据库自增主键；不是套餐业务编号',
+  `quota_plan_id` bigint(12) NOT NULL COMMENT '抽奖次数套餐业务编号；次数商品关联此编号',
+  `total_count` int(8) NOT NULL COMMENT '每份套餐增加的总抽奖次数额度；不是已抽次数或AI对话额度',
+  `day_count` int(8) NOT NULL COMMENT '每份套餐增加的每日抽奖次数额度；与总、月额度共同限制参与',
+  `month_count` int(8) NOT NULL COMMENT '每份套餐增加的每月抽奖次数额度；与总、日额度共同限制参与',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '套餐配置创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '套餐配置最后更新时间',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_activity_count_id` (`activity_count_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='抽奖活动次数配置表';
+  UNIQUE KEY `uq_quota_plan_id` (`quota_plan_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='抽奖次数套餐：每份发放的总、日、月参与额度；不是AI对话额度';
 
-LOCK TABLES `raffle_activity_count` WRITE;
-/*!40000 ALTER TABLE `raffle_activity_count` DISABLE KEYS */;
+LOCK TABLES `raffle_quota_plan` WRITE;
+/*!40000 ALTER TABLE `raffle_quota_plan` DISABLE KEYS */;
 
-INSERT INTO `raffle_activity_count` (`id`, `activity_count_id`, `total_count`, `day_count`, `month_count`, `create_time`, `update_time`)
+INSERT INTO `raffle_quota_plan` (`id`, `quota_plan_id`, `total_count`, `day_count`, `month_count`, `create_time`, `update_time`)
 VALUES
 	(1,11101,150,150,150,'2024-03-09 10:15:42','2024-06-22 08:52:19'),
 	(2,11102,50,50,50,'2024-06-22 08:48:34','2024-06-22 08:49:42'),
@@ -165,34 +165,34 @@ VALUES
 	(6,22202,5,5,5,'2024-10-06 12:11:13','2024-10-19 14:42:12'),
 	(7,22203,10,10,10,'2024-10-06 12:11:13','2024-10-19 14:42:12');
 
-/*!40000 ALTER TABLE `raffle_activity_count` ENABLE KEYS */;
+/*!40000 ALTER TABLE `raffle_quota_plan` ENABLE KEYS */;
 UNLOCK TABLES;
 
 
-# 转储表 raffle_activity_sku
+# 转储表 raffle_quota_product
 # ------------------------------------------------------------
 
-DROP TABLE IF EXISTS `raffle_activity_sku`;
+DROP TABLE IF EXISTS `raffle_quota_product`;
 
-CREATE TABLE `raffle_activity_sku` (
-  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '自增ID',
-  `sku` bigint(12) NOT NULL COMMENT '商品sku - 把每一个组合当做一个商品',
-  `activity_id` bigint(12) NOT NULL COMMENT '活动ID',
-  `activity_count_id` bigint(12) NOT NULL COMMENT '活动个人参与次数ID',
-  `stock_count` int(11) NOT NULL COMMENT '商品库存',
-  `stock_count_surplus` int(11) NOT NULL COMMENT '剩余库存',
-  `product_amount` decimal(10,2) NOT NULL COMMENT '商品金额【积分】',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+CREATE TABLE `raffle_quota_product` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '数据库自增主键；不是商品业务编号',
+  `sku` bigint(12) NOT NULL COMMENT '抽奖次数商品业务编号；兑换、返利发放及库存处理使用',
+  `activity_id` bigint(12) NOT NULL COMMENT '所属抽奖活动业务编号；关联raffle_activity.activity_id',
+  `quota_plan_id` bigint(12) NOT NULL COMMENT '关联raffle_quota_plan.quota_plan_id；决定每份商品发放的次数额度',
+  `stock_count` int(11) NOT NULL COMMENT '次数商品配置总库存；单位为份，不是奖品库存或抽奖次数',
+  `stock_count_surplus` int(11) NOT NULL COMMENT '次数商品数据库剩余库存；Redis扣减后异步回写，可能有延迟',
+  `product_amount` decimal(10,2) NOT NULL COMMENT '每份次数商品的积分价格；不是人民币或AI对话余额',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '次数商品配置创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '次数商品配置最后更新时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_sku` (`sku`),
-  KEY `idx_activity_id_activity_count_id` (`activity_id`,`activity_count_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  KEY `idx_activity_id_quota_plan_id` (`activity_id`,`quota_plan_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='抽奖次数商品：关联活动和次数套餐，配置积分价格及商品库存';
 
-LOCK TABLES `raffle_activity_sku` WRITE;
-/*!40000 ALTER TABLE `raffle_activity_sku` DISABLE KEYS */;
+LOCK TABLES `raffle_quota_product` WRITE;
+/*!40000 ALTER TABLE `raffle_quota_product` DISABLE KEYS */;
 
-INSERT INTO `raffle_activity_sku` (`id`, `sku`, `activity_id`, `activity_count_id`, `stock_count`, `stock_count_surplus`, `product_amount`, `create_time`, `update_time`)
+INSERT INTO `raffle_quota_product` (`id`, `sku`, `activity_id`, `quota_plan_id`, `stock_count`, `stock_count_surplus`, `product_amount`, `create_time`, `update_time`)
 VALUES
 	(1,9011,100301,11101,100000,99887,200.00,'2024-03-16 11:41:09','2024-06-22 08:49:32'),
 	(2,9012,100301,11102,100000,99885,100.00,'2024-03-16 11:41:09','2024-06-22 11:46:15'),
@@ -202,34 +202,34 @@ VALUES
 	(6,9902,100401,22202,100000,100000,10.00,'2024-03-16 11:41:09','2024-10-19 14:42:46'),
 	(7,9903,100401,22203,100000,100000,20.00,'2024-03-16 11:41:09','2024-10-19 14:42:46');
 
-/*!40000 ALTER TABLE `raffle_activity_sku` ENABLE KEYS */;
+/*!40000 ALTER TABLE `raffle_quota_product` ENABLE KEYS */;
 UNLOCK TABLES;
 
 
-# 转储表 raffle_activity_stage
+# 转储表 raffle_activity_listing
 # ------------------------------------------------------------
 
-DROP TABLE IF EXISTS `raffle_activity_stage`;
+DROP TABLE IF EXISTS `raffle_activity_listing`;
 
-CREATE TABLE `raffle_activity_stage` (
-  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
-  `channel` varchar(8) NOT NULL COMMENT '渠道',
-  `source` varchar(8) NOT NULL COMMENT '来源',
-  `activity_id` bigint(12) NOT NULL COMMENT '活动ID',
-  `state` varchar(8) NOT NULL DEFAULT 'create' COMMENT '上架状态；create、active、expire',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+CREATE TABLE `raffle_activity_listing` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '上架配置记录主键；不是活动业务编号',
+  `channel` varchar(8) NOT NULL COMMENT '渠道编码；与source共同定位活动入口，例如c01或test',
+  `source` varchar(8) NOT NULL COMMENT '渠道内来源或入口编码，例如s01或erp_demo',
+  `activity_id` bigint(12) NOT NULL COMMENT '上架的活动业务编号；关联raffle_activity.activity_id',
+  `state` varchar(8) NOT NULL DEFAULT 'create' COMMENT '入口上架状态：create待上架、active已上架、inactive已下架；expire为历史状态',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '上架配置创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '上架配置最后更新时间',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='活动展台 - 上架活动';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='活动上架配置：指定渠道入口关联的活动及上下架状态';
 
-LOCK TABLES `raffle_activity_stage` WRITE;
-/*!40000 ALTER TABLE `raffle_activity_stage` DISABLE KEYS */;
+LOCK TABLES `raffle_activity_listing` WRITE;
+/*!40000 ALTER TABLE `raffle_activity_listing` DISABLE KEYS */;
 
-INSERT INTO `raffle_activity_stage` (`id`, `channel`, `source`, `activity_id`, `state`, `create_time`, `update_time`)
+INSERT INTO `raffle_activity_listing` (`id`, `channel`, `source`, `activity_id`, `state`, `create_time`, `update_time`)
 VALUES
 	(1,'c01','s01',100401,'active','2024-10-26 19:01:42','2024-10-26 19:49:33');
 
-/*!40000 ALTER TABLE `raffle_activity_stage` ENABLE KEYS */;
+/*!40000 ALTER TABLE `raffle_activity_listing` ENABLE KEYS */;
 UNLOCK TABLES;
 
 

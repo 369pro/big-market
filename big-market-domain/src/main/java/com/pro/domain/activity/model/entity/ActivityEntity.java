@@ -48,7 +48,7 @@ public class ActivityEntity {
     /**
      * 活动参与次数配置
      */
-    private Long activityCountId;
+    private Long quotaPlanId;
 
     /**
      * 抽奖策略ID

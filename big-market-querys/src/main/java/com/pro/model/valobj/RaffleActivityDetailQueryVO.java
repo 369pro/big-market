@@ -60,7 +60,7 @@ public class RaffleActivityDetailQueryVO {
     public static class Sku {
         private Long sku;
         private Long activityId;
-        private Long activityCountId;
+        private Long quotaPlanId;
         private Integer countQuota;
         private Integer dayCount;
         private Integer monthCount;

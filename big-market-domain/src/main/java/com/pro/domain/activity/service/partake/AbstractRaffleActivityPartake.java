@@ -57,6 +57,11 @@ public abstract class AbstractRaffleActivityPartake implements IRaffleActivityPa
      */
     @Override
     public UserRaffleOrderEntity createOrder(PartakeRaffleActivityEntity partakeRaffleActivityEntity) {
+        if (partakeRaffleActivityEntity == null
+                || StringUtils.isBlank(partakeRaffleActivityEntity.getUserId())
+                || partakeRaffleActivityEntity.getActivityId() == null) {
+            throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), ResponseCode.ILLEGAL_PARAMETER.getInfo());
+        }
         // 0. 基础信息
         String userId = partakeRaffleActivityEntity.getUserId();
         Long activityId = partakeRaffleActivityEntity.getActivityId();
@@ -79,6 +84,9 @@ public abstract class AbstractRaffleActivityPartake implements IRaffleActivityPa
 
         // 1. 活动查询
         ActivityEntity activityEntity = activityRepository.queryRaffleActivityByActivityId(activityId);
+        if (activityEntity == null) {
+            throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), ResponseCode.ILLEGAL_PARAMETER.getInfo());
+        }
 
         // 校验；活动状态
         if (!ActivityStateVO.open.equals(activityEntity.getState())) {
@@ -114,7 +122,28 @@ public abstract class AbstractRaffleActivityPartake implements IRaffleActivityPa
         createPartakeOrderAggregate.setUserRaffleOrderEntity(userRaffleOrder);
 
         // 6. 保存聚合对象 - 一个领域内的一个聚合是一个事务操作【更新日月账户额度】
-        activityRepository.saveCreatePartakeOrderAggregate(createPartakeOrderAggregate);
+        try {
+            activityRepository.saveCreatePartakeOrderAggregate(createPartakeOrderAggregate);
+        } catch (AppException e) {
+            // The request-key unique index is the final concurrency guard. A
+            // second caller can lose the insert race even when the HTTP layer
+            // lock is unavailable; recover the committed winner instead of
+            // turning an idempotent retry into INDEX_DUP.
+            if (StringUtils.isBlank(partakeRaffleActivityEntity.getRequestId())
+                    || !ResponseCode.INDEX_DUP.getCode().equals(e.getCode())) {
+                throw e;
+            }
+            UserRaffleOrderEntity existingOrder = activityRepository
+                    .queryRaffleOrderByRequestId(partakeRaffleActivityEntity);
+            if (existingOrder == null) {
+                throw e;
+            }
+            if (!activityId.equals(existingOrder.getActivityId())) {
+                throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(),
+                        ResponseCode.ILLEGAL_PARAMETER.getInfo());
+            }
+            return existingOrder;
+        }
         log.info("创建活动抽奖单完成 userId:{} activityId:{} orderId:{}", userId, activityId, userRaffleOrder.getOrderId());
         // 7. 返回订单信息
         return userRaffleOrder;

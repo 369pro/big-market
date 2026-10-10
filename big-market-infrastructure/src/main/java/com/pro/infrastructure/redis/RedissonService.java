@@ -31,6 +31,9 @@ public class RedissonService implements IRedisService {
     /** Lua 脚本 SHA（启动时预加载） */
     private String stockDeductionSha;
 
+    /** 与 SHA 对应的 classpath 源码，EVALSHA 失效时必须复用同一份脚本。 */
+    private String stockDeductionScript;
+
     public <T> void setValue(String key, T value) {
         redissonClient.<T>getBucket(key).set(value);
     }
@@ -203,14 +206,16 @@ public class RedissonService implements IRedisService {
 
     @PostConstruct
     public void loadStockDeductionScript() {
+        stockDeductionSha = null;
         try {
-            ClassPathResource resource = new ClassPathResource("lua/stock_deduction.lua");
-            String script;
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
-                script = reader.lines().collect(Collectors.joining("\n"));
-            }
-            stockDeductionSha = redissonClient.getScript().scriptLoad(script);
+            stockDeductionScript = readStockDeductionScript();
+        } catch (Exception e) {
+            stockDeductionScript = null;
+            log.error("库存扣减 Lua 脚本读取失败", e);
+            return;
+        }
+        try {
+            stockDeductionSha = redissonClient.getScript().scriptLoad(stockDeductionScript);
             log.info("库存扣减 Lua 脚本加载成功 sha={}", stockDeductionSha);
         } catch (Exception e) {
             log.error("库存扣减 Lua 脚本加载失败，将回退到 eval 模式", e);
@@ -235,16 +240,23 @@ public class RedissonService implements IRedisService {
             log.warn("EVALSHA 执行失败，回退到 EVAL stockKey={}", stockKey, e);
         }
         // 回退到 eval 模式（脚本未预加载或 SHA 过期）
-        String rawScript = "-- fallback: loaded from classpath\n" +
-                "local surplus = redis.call('DECR', KEYS[1])\n" +
-                "if surplus < 0 then redis.call('SET', KEYS[1], 0); return {-1, 0}; end\n" +
-                "local lockKey = ARGV[3] .. '_' .. surplus\n" +
-                "local lockOk; if ARGV[1] == '0' then lockOk = redis.call('SET', lockKey, '1', 'NX') " +
-                "else lockOk = redis.call('SET', lockKey, '1', 'PX', ARGV[1], 'NX') end\n" +
-                "if not lockOk then redis.call('INCR', KEYS[1]); return {0, surplus}; end\n" +
-                "redis.call('SADD', KEYS[2], ARGV[2] .. ':' .. surplus); return {1, surplus}";
+        String rawScript = stockDeductionScript;
+        if (rawScript == null) {
+            rawScript = readStockDeductionScript();
+            stockDeductionScript = rawScript;
+        }
         return toLongList(script.eval(RScript.Mode.READ_WRITE,
                 rawScript, RScript.ReturnType.MULTI, keys, args.toArray()));
+    }
+
+    private String readStockDeductionScript() {
+        ClassPathResource resource = new ClassPathResource("lua/stock_deduction.lua");
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
+            return reader.lines().collect(Collectors.joining("\n"));
+        } catch (Exception e) {
+            throw new IllegalStateException("无法读取库存扣减 Lua 脚本", e);
+        }
     }
 
     @Override

@@ -36,12 +36,22 @@ public class OpenAIAccountAdjustQuotaAward implements IDistributeAward {
         if (StringUtils.isBlank(awardConfig)) {
             awardConfig = repository.queryAwardConfig(awardId);
         }
+        final int increaseQuota;
+        try {
+            increaseQuota = Integer.parseInt(awardConfig);
+        } catch (RuntimeException e) {
+            throw new IllegalArgumentException("award quota configuration is invalid", e);
+        }
+        if (increaseQuota <= 0) {
+            throw new IllegalArgumentException("award quota must be positive");
+        }
         // 发奖接口；订单号作为远端调额接口的幂等键。
-        port.adjustAmount(distributeAwardEntity.getUserId(), distributeAwardEntity.getOrderId(), Integer.valueOf(awardConfig));
+        port.adjustAmount(distributeAwardEntity.getUserId(), distributeAwardEntity.getOrderId(), increaseQuota);
 
         // 远端成功后再完成本地中奖记录。重复消息会被远端唯一键拦截，且本地状态更新也是条件更新。
         // 已完成的重复消息会被条件更新拦截，不抛异常，避免触发无意义的 MQ 重试。
-        repository.updateAwardRecordCompletedState(distributeAwardEntity.getUserId(), distributeAwardEntity.getOrderId());
+        repository.updateAwardRecordCompletedState(distributeAwardEntity.getUserId(),
+                distributeAwardEntity.getOrderId(), distributeAwardEntity.getAwardId());
     }
 
 }

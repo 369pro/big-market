@@ -19,7 +19,7 @@ public class RaffleActivitySkuResponseDTO implements Serializable {
 
     private Long sku;
     private Long activityId;
-    private Long activityCountId;
+    private Long quotaPlanId;
     /** Total raffle quota granted by this SKU. */
     private Integer countQuota;
     private Integer dayCount;

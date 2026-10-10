@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class RaffleActivityStageResponseDTO {
+public class RaffleActivityListingResponseDTO {
 
     /** 自增ID */
     private Long id;

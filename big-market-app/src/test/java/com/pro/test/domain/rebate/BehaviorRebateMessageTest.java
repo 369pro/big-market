@@ -9,6 +9,8 @@ import com.pro.domain.rebate.model.valobj.DailyBehaviorRebateVO;
 import com.pro.domain.rebate.repository.IBehaviorRebateRepository;
 import com.pro.domain.rebate.service.BehaviorRebateService;
 import com.pro.types.event.BaseEvent;
+import com.pro.types.enums.ResponseCode;
+import com.pro.types.exception.AppException;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -120,6 +122,16 @@ public class BehaviorRebateMessageTest {
         assertEquals(64, first.length());
         assertEquals(64, second.length());
         assertNotEquals(first, second);
+    }
+
+    @Test
+    public void rejectsBusinessKeysThatWouldBeTruncatedByTheRebateSchema() {
+        try {
+            service.createOrder(behavior(new String(new char[129]).replace('\0', 'u'), "2026-01-24"));
+            org.junit.Assert.fail("Expected an oversized user id to be rejected");
+        } catch (AppException exception) {
+            assertEquals(ResponseCode.ILLEGAL_PARAMETER.getCode(), exception.getCode());
+        }
     }
 
     private BehaviorEntity behavior(String userId, String outBusinessNo) {

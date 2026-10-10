@@ -30,7 +30,7 @@ public class RaffleActivityAccountQuotaService extends AbstractRaffleActivityAcc
     }
 
     @Override
-    protected CreateQuotaOrderAggregate buildOrderAggregate(SkuRechargeEntity skuRechargeEntity, ActivitySkuEntity activitySkuEntity, ActivityEntity activityEntity, ActivityCountEntity activityCountEntity) {
+    protected CreateQuotaOrderAggregate buildOrderAggregate(SkuRechargeEntity skuRechargeEntity, ActivitySkuEntity activitySkuEntity, ActivityEntity activityEntity, QuotaPlanEntity quotaPlanEntity) {
         // 订单实体对象
         ActivityOrderEntity activityOrderEntity = new ActivityOrderEntity();
         activityOrderEntity.setUserId(skuRechargeEntity.getUserId());
@@ -41,9 +41,9 @@ public class RaffleActivityAccountQuotaService extends AbstractRaffleActivityAcc
         // 公司里一般会有专门的雪花算法UUID服务，我们这里直接生成个12位就可以了。
         activityOrderEntity.setOrderId(RandomStringUtils.randomNumeric(12));
         activityOrderEntity.setOrderTime(new Date());
-        activityOrderEntity.setTotalCount(activityCountEntity.getTotalCount());
-        activityOrderEntity.setDayCount(activityCountEntity.getDayCount());
-        activityOrderEntity.setMonthCount(activityCountEntity.getMonthCount());
+        activityOrderEntity.setTotalCount(quotaPlanEntity.getTotalCount());
+        activityOrderEntity.setDayCount(quotaPlanEntity.getDayCount());
+        activityOrderEntity.setMonthCount(quotaPlanEntity.getMonthCount());
         activityOrderEntity.setState(OrderStateVO.completed);
         activityOrderEntity.setPayAmount(activitySkuEntity.getProductAmount());
         activityOrderEntity.setOutBusinessNo(skuRechargeEntity.getOutBusinessNo());
@@ -52,9 +52,9 @@ public class RaffleActivityAccountQuotaService extends AbstractRaffleActivityAcc
         return CreateQuotaOrderAggregate.builder()
                 .userId(skuRechargeEntity.getUserId())
                 .activityId(activitySkuEntity.getActivityId())
-                .totalCount(activityCountEntity.getTotalCount())
-                .dayCount(activityCountEntity.getDayCount())
-                .monthCount(activityCountEntity.getMonthCount())
+                .totalCount(quotaPlanEntity.getTotalCount())
+                .dayCount(quotaPlanEntity.getDayCount())
+                .monthCount(quotaPlanEntity.getMonthCount())
                 .activityOrderEntity(activityOrderEntity)
                 .build();
     }

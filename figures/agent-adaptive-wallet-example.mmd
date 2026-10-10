@@ -1,0 +1,10 @@
+%%{init: {"theme":"base","fontFamily":"Arial, sans-serif","themeVariables":{"fontSize":"20px","fontFamily":"Arial, sans-serif","primaryColor":"#eff6ff","primaryTextColor":"#172b4d","primaryBorderColor":"#6b9bd2","lineColor":"#52677e","edgeLabelBackground":"#ffffff"},"flowchart":{"htmlLabels":false,"curve":"linear","wrappingWidth":540,"rankSpacing":24,"padding":18}}}%%
+flowchart TB
+    start["① 钱包 ¥0.012，任务预算 ¥0.010<br/>估算输入 1,000，期望输出 4,096 tokens"]
+    limit["② 输入加余量后按 1,200 tokens 预留<br/>预算可负担的输出上限为 950 tokens"]
+    hold["③ 按批准上限预扣 ¥0.010<br/>钱包剩余 ¥0.002，模型最多输出 950 tokens"]
+    actual["④ 假设实际输入 1,000、输出 200 tokens<br/>实际费用 ¥0.0036，退回 ¥0.0064"]
+    finish["⑤ 钱包最终 ¥0.0084<br/>任务已花 ¥0.0036，剩余预算 ¥0.0064"]
+    start --> limit --> hold --> actual --> finish
+    classDef money fill:#ecfdf5,stroke:#34a478,color:#14543b
+    class hold,actual,finish money

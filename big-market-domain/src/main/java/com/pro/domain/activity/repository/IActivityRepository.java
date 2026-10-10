@@ -20,7 +20,7 @@ public interface IActivityRepository {
 
     ActivityEntity queryRaffleActivityByActivityId(Long activityId);
 
-    ActivityCountEntity queryRaffleActivityCountByActivityCountId(Long activityCountId);
+    QuotaPlanEntity queryRaffleQuotaPlanByQuotaPlanId(Long quotaPlanId);
     // 用户签到领取活动，不需要支付创建活动订单
     void doSaveNoPayOrder(CreateQuotaOrderAggregate createOrderAggregate);
     // 利用积分兑换领取活动
@@ -108,10 +108,10 @@ public interface IActivityRepository {
 
     Long queryStageActiveBySC(String channel, String source);
 
-    List<RaffleActivityStageEntity> queryStageActivityList();
+    List<RaffleActivityListingEntity> queryStageActivityList();
 
     Long queryStageActivity2ActiveById(Long id);
 
-    RaffleActivityStageEntity queryStageActivityById(Long id);
+    RaffleActivityListingEntity queryStageActivityById(Long id);
 
 }

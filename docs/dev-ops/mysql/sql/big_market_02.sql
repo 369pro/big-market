@@ -46,7 +46,6 @@ CREATE TABLE `raffle_activity_account` (
 
 LOCK TABLES `raffle_activity_account` WRITE;
 /*!40000 ALTER TABLE `raffle_activity_account` DISABLE KEYS */;
-
 /*!40000 ALTER TABLE `raffle_activity_account` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -71,7 +70,6 @@ CREATE TABLE `raffle_activity_account_day` (
 
 LOCK TABLES `raffle_activity_account_day` WRITE;
 /*!40000 ALTER TABLE `raffle_activity_account_day` DISABLE KEYS */;
-
 /*!40000 ALTER TABLE `raffle_activity_account_day` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -96,7 +94,6 @@ CREATE TABLE `raffle_activity_account_month` (
 
 LOCK TABLES `raffle_activity_account_month` WRITE;
 /*!40000 ALTER TABLE `raffle_activity_account_month` DISABLE KEYS */;
-
 /*!40000 ALTER TABLE `raffle_activity_account_month` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -161,7 +158,6 @@ CREATE TABLE `raffle_activity_order_001` (
 
 LOCK TABLES `raffle_activity_order_001` WRITE;
 /*!40000 ALTER TABLE `raffle_activity_order_001` DISABLE KEYS */;
-
 /*!40000 ALTER TABLE `raffle_activity_order_001` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -248,7 +244,6 @@ CREATE TABLE `task` (
 
 LOCK TABLES `task` WRITE;
 /*!40000 ALTER TABLE `task` DISABLE KEYS */;
-
 /*!40000 ALTER TABLE `task` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -407,7 +402,6 @@ CREATE TABLE `user_behavior_rebate_order_001` (
 
 LOCK TABLES `user_behavior_rebate_order_001` WRITE;
 /*!40000 ALTER TABLE `user_behavior_rebate_order_001` DISABLE KEYS */;
-
 /*!40000 ALTER TABLE `user_behavior_rebate_order_001` ENABLE KEYS */;
 UNLOCK TABLES;
 

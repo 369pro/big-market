@@ -71,7 +71,7 @@ public class ActivityRepository implements IActivityRepository {
     @Resource
     private IRaffleActivitySkuDao raffleActivitySkuDao;
     @Resource
-    private IRaffleActivityCountDao raffleActivityCountDao;
+    private IRaffleQuotaPlanDao raffleQuotaPlanDao;
     @Resource
     private IRaffleActivityOrderDao raffleActivityOrderDao;
     @Resource
@@ -91,7 +91,7 @@ public class ActivityRepository implements IActivityRepository {
     @Resource
     private EventPublisher eventPublisher;
     @Resource
-    private IRaffleActivityStageDao raffleActivityStageDao;
+    private IRaffleActivityListingDao raffleActivityListingDao;
 
     // 因为这里才要预先装配
     @Override
@@ -105,7 +105,7 @@ public class ActivityRepository implements IActivityRepository {
         return ActivitySkuEntity.builder()
                 .sku(raffleActivitySku.getSku())
                 .activityId(raffleActivitySku.getActivityId())
-                .activityCountId(raffleActivitySku.getActivityCountId())
+                .quotaPlanId(raffleActivitySku.getQuotaPlanId())
                 .productAmount(raffleActivitySku.getProductAmount())
                 .stockCount(raffleActivitySku.getStockCount())
                 .stockCountSurplus(cacheSkuStock.intValue())
@@ -135,21 +135,21 @@ public class ActivityRepository implements IActivityRepository {
     }
 
     @Override
-    public ActivityCountEntity queryRaffleActivityCountByActivityCountId(Long activityCountId) {
+    public QuotaPlanEntity queryRaffleQuotaPlanByQuotaPlanId(Long quotaPlanId) {
         // 优先从缓存获取
-        String cacheKey = Constants.RedisKey.ACTIVITY_COUNT_KEY + activityCountId;
-        ActivityCountEntity activityCountEntity = redisService.getValue(cacheKey);
-        if (null != activityCountEntity) return activityCountEntity;
+        String cacheKey = Constants.RedisKey.QUOTA_PLAN_KEY + quotaPlanId;
+        QuotaPlanEntity quotaPlanEntity = redisService.getValue(cacheKey);
+        if (null != quotaPlanEntity) return quotaPlanEntity;
         // 从库中获取数据
-        RaffleActivityCount raffleActivityCount = raffleActivityCountDao.queryRaffleActivityCountByActivityCountId(activityCountId);
-        activityCountEntity = ActivityCountEntity.builder()
-                .activityCountId(raffleActivityCount.getActivityCountId())
-                .totalCount(raffleActivityCount.getTotalCount())
-                .dayCount(raffleActivityCount.getDayCount())
-                .monthCount(raffleActivityCount.getMonthCount())
+        RaffleQuotaPlan raffleQuotaPlan = raffleQuotaPlanDao.queryRaffleQuotaPlanByQuotaPlanId(quotaPlanId);
+        quotaPlanEntity = QuotaPlanEntity.builder()
+                .quotaPlanId(raffleQuotaPlan.getQuotaPlanId())
+                .totalCount(raffleQuotaPlan.getTotalCount())
+                .dayCount(raffleQuotaPlan.getDayCount())
+                .monthCount(raffleQuotaPlan.getMonthCount())
                 .build();
-        redisService.setValue(cacheKey, activityCountEntity);
-        return activityCountEntity;
+        redisService.setValue(cacheKey, quotaPlanEntity);
+        return quotaPlanEntity;
     }
     // 用户签到领取活动，不需要支付创建活动订单
     @Override
@@ -387,6 +387,12 @@ public class ActivityRepository implements IActivityRepository {
 
     @Override
     public boolean reserveActivitySkuStock(Long sku, String reservationId, Date endDateTime) {
+        if (sku == null || reservationId == null || reservationId.trim().isEmpty() || endDateTime == null) {
+            throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), ResponseCode.ILLEGAL_PARAMETER.getInfo());
+        }
+        if (reservationScript == null || reservationScript.trim().isEmpty()) {
+            throw new IllegalStateException("Activity stock reservation script is not loaded");
+        }
         String stockKey = Constants.RedisKey.ACTIVITY_SKU_STOCK_COUNT_KEY + sku;
         long retention = Math.max(TimeUnit.DAYS.toMillis(1),
                 endDateTime.getTime() - System.currentTimeMillis() + TimeUnit.DAYS.toMillis(7));
@@ -394,8 +400,14 @@ public class ActivityRepository implements IActivityRepository {
                 reservationScript, RScript.ReturnType.INTEGER,
                 Arrays.asList(stockKey, "activity:stock:reservation:" + reservationId),
                 String.valueOf(sku), String.valueOf(retention));
+        if (result == null) {
+            throw new IllegalStateException("Activity stock reservation returned no result");
+        }
         if (result == -2L) {
             throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), "Business key already used for another SKU");
+        }
+        if (result == -3L) {
+            throw new IllegalStateException("Activity stock reservation could not persist its reservation record");
         }
         return result == 1L;
     }
@@ -708,7 +720,7 @@ public class ActivityRepository implements IActivityRepository {
         for (RaffleActivitySku raffleActivitySku:raffleActivitySkus){
             ActivitySkuEntity activitySkuEntity = new ActivitySkuEntity();
             activitySkuEntity.setSku(raffleActivitySku.getSku());
-            activitySkuEntity.setActivityCountId(raffleActivitySku.getActivityCountId());
+            activitySkuEntity.setQuotaPlanId(raffleActivitySku.getQuotaPlanId());
             activitySkuEntity.setStockCount(raffleActivitySku.getStockCount());
             activitySkuEntity.setStockCountSurplus(raffleActivitySku.getStockCountSurplus());
             activitySkuEntities.add(activitySkuEntity);
@@ -833,17 +845,17 @@ public class ActivityRepository implements IActivityRepository {
         List<RaffleActivitySku> raffleActivitySkus = raffleActivitySkuDao.queryActivitySkuListByActivityId(activityId);
         List<SkuProductEntity> skuProductEntities = new ArrayList<>(raffleActivitySkus.size());
         for (RaffleActivitySku raffleActivitySku : raffleActivitySkus) {
-            RaffleActivityCount raffleActivityCount = raffleActivityCountDao.queryRaffleActivityCountByActivityCountId(raffleActivitySku.getActivityCountId());
+            RaffleQuotaPlan raffleQuotaPlan = raffleQuotaPlanDao.queryRaffleQuotaPlanByQuotaPlanId(raffleActivitySku.getQuotaPlanId());
 
             SkuProductEntity.ActivityCount activityCount = new SkuProductEntity.ActivityCount();
-            activityCount.setTotalCount(raffleActivityCount.getTotalCount());
-            activityCount.setMonthCount(raffleActivityCount.getMonthCount());
-            activityCount.setDayCount(raffleActivityCount.getDayCount());
+            activityCount.setTotalCount(raffleQuotaPlan.getTotalCount());
+            activityCount.setMonthCount(raffleQuotaPlan.getMonthCount());
+            activityCount.setDayCount(raffleQuotaPlan.getDayCount());
 
             skuProductEntities.add(SkuProductEntity.builder()
                     .sku(raffleActivitySku.getSku())
                     .activityId(raffleActivitySku.getActivityId())
-                    .activityCountId(raffleActivitySku.getActivityCountId())
+                    .quotaPlanId(raffleActivitySku.getQuotaPlanId())
                     .stockCount(raffleActivitySku.getStockCount())
                     .stockCountSurplus(raffleActivitySku.getStockCountSurplus())
                     .productAmount(raffleActivitySku.getProductAmount())
@@ -856,18 +868,18 @@ public class ActivityRepository implements IActivityRepository {
 
     @Override
     public void appendStageActivity(String channel, String source, Long activityId) {
-        RaffleActivityStage raffleActivityStage = new RaffleActivityStage();
-        raffleActivityStage.setChannel(normalizeStagePart(channel));
-        raffleActivityStage.setSource(normalizeStagePart(source));
-        raffleActivityStage.setActivityId(activityId);
-        raffleActivityStage.setState("create");
-        raffleActivityStageDao.insert(raffleActivityStage);
-        invalidateStageActivityCache(raffleActivityStage.getChannel(), raffleActivityStage.getSource());
+        RaffleActivityListing raffleActivityListing = new RaffleActivityListing();
+        raffleActivityListing.setChannel(normalizeStagePart(channel));
+        raffleActivityListing.setSource(normalizeStagePart(source));
+        raffleActivityListing.setActivityId(activityId);
+        raffleActivityListing.setState("create");
+        raffleActivityListingDao.insert(raffleActivityListing);
+        invalidateStageActivityCache(raffleActivityListing.getChannel(), raffleActivityListing.getSource());
     }
 
     @Override
     public void updateStageActivity2Active(Long id) {
-        RaffleActivityStage stage = raffleActivityStageDao.queryStageActivityById(id);
+        RaffleActivityListing stage = raffleActivityListingDao.queryStageActivityById(id);
         if (stage == null) {
             throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), "上架记录不存在: " + id);
         }
@@ -890,9 +902,9 @@ public class ActivityRepository implements IActivityRepository {
                 }
                 if ("active".equals(state)) {
                     validateStageActivityCanBeActive(activity, activityId);
-                    List<RaffleActivityStage> activeStages = raffleActivityStageDao.queryStageActiveBySCForConflict(
+                    List<RaffleActivityListing> activeStages = raffleActivityListingDao.queryStageActiveBySCForConflict(
                             stageKey(normalizedChannel, normalizedSource));
-                    for (RaffleActivityStage activeStage : activeStages) {
+                    for (RaffleActivityListing activeStage : activeStages) {
                         if (!activityId.equals(activeStage.getActivityId())) {
                             throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(),
                                     "该渠道已有上架活动，请先下架: " + normalizedChannel + "/" + normalizedSource);
@@ -900,14 +912,14 @@ public class ActivityRepository implements IActivityRepository {
                     }
                 }
 
-                RaffleActivityStage stage = stageKey(normalizedChannel, normalizedSource);
+                RaffleActivityListing stage = stageKey(normalizedChannel, normalizedSource);
                 stage.setActivityId(activityId);
                 stage.setState(state);
-                RaffleActivityStage existingStage = raffleActivityStageDao.queryStageActivityByKey(stage);
+                RaffleActivityListing existingStage = raffleActivityListingDao.queryStageActivityByKey(stage);
                 if (existingStage == null) {
-                    raffleActivityStageDao.insert(stage);
+                    raffleActivityListingDao.insert(stage);
                 } else {
-                    raffleActivityStageDao.updateStageActivityState(stage);
+                    raffleActivityListingDao.updateStageActivityState(stage);
                 }
                 return null;
             });
@@ -938,8 +950,8 @@ public class ActivityRepository implements IActivityRepository {
         }
     }
 
-    private RaffleActivityStage stageKey(String channel, String source) {
-        RaffleActivityStage stage = new RaffleActivityStage();
+    private RaffleActivityListing stageKey(String channel, String source) {
+        RaffleActivityListing stage = new RaffleActivityListing();
         stage.setChannel(normalizeStagePart(channel));
         stage.setSource(normalizeStagePart(source));
         return stage;
@@ -955,7 +967,7 @@ public class ActivityRepository implements IActivityRepository {
 
     @Override
     public Long queryStageActiveBySC(String channel, String source) {
-        RaffleActivityStage key = stageKey(channel, source);
+        RaffleActivityListing key = stageKey(channel, source);
         String cacheKey = Constants.RedisKey.STAGE_ACTIVITY_KEY + key.getChannel()
                 + Constants.UNDERLINE + key.getSource();
         Object cachedValue = redisService.getValue(cacheKey);
@@ -973,12 +985,12 @@ public class ActivityRepository implements IActivityRepository {
             return cachedActivityId;
         }
 
-        List<RaffleActivityStage> stages = raffleActivityStageDao.queryStageActiveBySC(key);
+        List<RaffleActivityListing> stages = raffleActivityListingDao.queryStageActiveBySC(key);
         if (stages == null || stages.isEmpty()) {
             redisService.remove(cacheKey);
             return null;
         }
-        RaffleActivityStage current = stages.get(0);
+        RaffleActivityListing current = stages.get(0);
         Long activityId = current.getActivityId();
         if (activityId != null && current.getEndDateTime() != null) {
             long ttl = Math.max(1L, current.getEndDateTime().getTime() - System.currentTimeMillis() + 1000L);
@@ -988,44 +1000,44 @@ public class ActivityRepository implements IActivityRepository {
     }
 
     @Override
-    public List<RaffleActivityStageEntity> queryStageActivityList() {
-        List<RaffleActivityStageEntity> raffleActivityStageEntities = new ArrayList<>();
-        List<RaffleActivityStage> list = raffleActivityStageDao.queryStageActivityList();
-        for (RaffleActivityStage raffleActivityStage : list) {
-            RaffleActivityStageEntity raffleActivityStageEntity = RaffleActivityStageEntity.builder()
-                    .id(raffleActivityStage.getId())
-                    .channel(raffleActivityStage.getChannel())
-                    .source(raffleActivityStage.getSource())
-                    .activityId(raffleActivityStage.getActivityId())
-                    .state(raffleActivityStage.getState())
-                    .activityName(raffleActivityStage.getActivityName())
-                    .activityDesc(raffleActivityStage.getActivityDesc())
-                    .strategyId(raffleActivityStage.getStrategyId())
-                    .activityState(raffleActivityStage.getActivityState())
-                    .beginDateTime(raffleActivityStage.getBeginDateTime())
-                    .endDateTime(raffleActivityStage.getEndDateTime())
+    public List<RaffleActivityListingEntity> queryStageActivityList() {
+        List<RaffleActivityListingEntity> raffleActivityListingEntities = new ArrayList<>();
+        List<RaffleActivityListing> list = raffleActivityListingDao.queryStageActivityList();
+        for (RaffleActivityListing raffleActivityListing : list) {
+            RaffleActivityListingEntity raffleActivityListingEntity = RaffleActivityListingEntity.builder()
+                    .id(raffleActivityListing.getId())
+                    .channel(raffleActivityListing.getChannel())
+                    .source(raffleActivityListing.getSource())
+                    .activityId(raffleActivityListing.getActivityId())
+                    .state(raffleActivityListing.getState())
+                    .activityName(raffleActivityListing.getActivityName())
+                    .activityDesc(raffleActivityListing.getActivityDesc())
+                    .strategyId(raffleActivityListing.getStrategyId())
+                    .activityState(raffleActivityListing.getActivityState())
+                    .beginDateTime(raffleActivityListing.getBeginDateTime())
+                    .endDateTime(raffleActivityListing.getEndDateTime())
                     .build();
-            raffleActivityStageEntities.add(raffleActivityStageEntity);
+            raffleActivityListingEntities.add(raffleActivityListingEntity);
         }
-        return raffleActivityStageEntities;
+        return raffleActivityListingEntities;
     }
 
     @Override
     public Long queryStageActivity2ActiveById(Long id) {
-        return raffleActivityStageDao.queryStageActivity2ActiveById(id);
+        return raffleActivityListingDao.queryStageActivity2ActiveById(id);
     }
 
     @Override
-    public RaffleActivityStageEntity queryStageActivityById(Long id) {
-        RaffleActivityStage stage = raffleActivityStageDao.queryStageActivityById(id);
+    public RaffleActivityListingEntity queryStageActivityById(Long id) {
+        RaffleActivityListing stage = raffleActivityListingDao.queryStageActivityById(id);
         if (stage == null) {
             return null;
         }
         return toStageEntity(stage);
     }
 
-    private RaffleActivityStageEntity toStageEntity(RaffleActivityStage stage) {
-        return RaffleActivityStageEntity.builder()
+    private RaffleActivityListingEntity toStageEntity(RaffleActivityListing stage) {
+        return RaffleActivityListingEntity.builder()
                 .id(stage.getId())
                 .channel(stage.getChannel())
                 .source(stage.getSource())

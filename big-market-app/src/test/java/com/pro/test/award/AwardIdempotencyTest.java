@@ -29,6 +29,7 @@ import java.math.BigDecimal;
 
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
@@ -78,6 +79,27 @@ public class AwardIdempotencyTest {
         when(userAwardRecordDao.queryByUserIdAndOrderId(any())).thenReturn(completedAwardRecord());
 
         repository.saveGiveOutPrizesAggregate(creditAggregate());
+
+        verify(transactionStatus, never()).setRollbackOnly();
+        verifyNoInteractions(userCreditAccountDao);
+    }
+
+    @Test
+    public void mismatchedAwardMessageCannotClaimThePersistedRecord() {
+        when(userAwardRecordDao.updateAwardRecordCompletedState(any())).thenReturn(0);
+        UserAwardRecord persisted = new UserAwardRecord();
+        persisted.setUserId("user-1");
+        persisted.setOrderId("award-order-1");
+        persisted.setAwardId(101);
+        persisted.setAwardState("create");
+        when(userAwardRecordDao.queryByUserIdAndOrderId(any())).thenReturn(persisted);
+
+        try {
+            repository.saveGiveOutPrizesAggregate(creditAggregateWithAwardId(102));
+            fail("Expected an award id conflict to remain retryable");
+        } catch (IllegalStateException expected) {
+            // A message for another prize must not move this order to completed.
+        }
 
         verify(transactionStatus).setRollbackOnly();
         verifyNoInteractions(userCreditAccountDao);
@@ -135,12 +157,18 @@ public class AwardIdempotencyTest {
     @Test
     public void repeatedRemoteCompletionVerifiesPersistedState() {
         when(userAwardRecordDao.queryByUserIdAndOrderId(any())).thenReturn(completedAwardRecord());
-        org.junit.Assert.assertFalse(repository.updateAwardRecordCompletedState("user-1", "award-order-1"));
+        org.junit.Assert.assertFalse(repository.updateAwardRecordCompletedState("user-1", "award-order-1", 101));
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void repeatedRemoteCompletionRejectsAnotherAwardForTheSameOrder() {
+        when(userAwardRecordDao.queryByUserIdAndOrderId(any())).thenReturn(completedAwardRecord());
+        repository.updateAwardRecordCompletedState("user-1", "award-order-1", 102);
     }
 
     @Test(expected = IllegalStateException.class)
     public void missingRemoteCompletionRecordRequiresRetry() {
-        repository.updateAwardRecordCompletedState("user-1", "award-order-1");
+        repository.updateAwardRecordCompletedState("user-1", "award-order-1", 101);
     }
 
     @Test
@@ -162,7 +190,7 @@ public class AwardIdempotencyTest {
 
         InOrder order = org.mockito.Mockito.inOrder(port, awardRepository);
         order.verify(port).adjustAmount("user-1", "award-order-1", 3);
-        order.verify(awardRepository).updateAwardRecordCompletedState("user-1", "award-order-1");
+        order.verify(awardRepository).updateAwardRecordCompletedState("user-1", "award-order-1", 110);
     }
 
     @Test
@@ -187,14 +215,41 @@ public class AwardIdempotencyTest {
             // MQ must retry while the local award remains unfinished.
         }
 
-        verify(awardRepository, never()).updateAwardRecordCompletedState(anyString(), anyString());
+        verify(awardRepository, never()).updateAwardRecordCompletedState(anyString(), anyString(), anyInt());
+    }
+
+    @Test
+    public void invalidQuotaConfigurationDoesNotCallTheRemoteGrant() throws Exception {
+        IAwardPort port = mock(IAwardPort.class);
+        IAwardRepository awardRepository = mock(IAwardRepository.class);
+        OpenAIAccountAdjustQuotaAward award = new OpenAIAccountAdjustQuotaAward();
+        ReflectionTestUtils.setField(award, "port", port);
+        ReflectionTestUtils.setField(award, "repository", awardRepository);
+        when(awardRepository.queryAwardConfig(110)).thenReturn("-1");
+
+        try {
+            award.giveOutPrizes(DistributeAwardEntity.builder()
+                    .userId("user-1")
+                    .orderId("award-order-1")
+                    .awardId(110)
+                    .build());
+            fail("Expected a non-positive quota to be rejected");
+        } catch (IllegalArgumentException expected) {
+            // A malformed amount must never reach the remote idempotency ledger.
+        }
+
+        verifyNoInteractions(port);
     }
 
     private GiveOutPrizesAggregate creditAggregate() {
+        return creditAggregateWithAwardId(101);
+    }
+
+    private GiveOutPrizesAggregate creditAggregateWithAwardId(int awardId) {
         UserAwardRecordEntity awardRecord = UserAwardRecordEntity.builder()
                 .userId("user-1")
                 .orderId("award-order-1")
-                .awardId(101)
+                .awardId(awardId)
                 .awardState(AwardStateVO.complete)
                 .build();
         UserCreditAwardEntity creditAward = UserCreditAwardEntity.builder()

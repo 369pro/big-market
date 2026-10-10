@@ -19,6 +19,14 @@ public class RewardRetryTest {
         verifyNoInteractions(quota);
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void malformedCreditSuccessMessageIsRetryable() {
+        CreditAdjustSuccessCustomer consumer = new CreditAdjustSuccessCustomer();
+        ReflectionTestUtils.setField(consumer, "raffleActivityAccountQuotaService",
+                mock(IRaffleActivityAccountQuotaService.class));
+        consumer.listener("{\"id\":\"1\",\"data\":{\"amount\":-5}}");
+    }
+
     @Test(expected = AppException.class)
     public void unverifiedDeliveryConflictRemainsRetryable() {
         CreditAdjustSuccessCustomer consumer = new CreditAdjustSuccessCustomer();

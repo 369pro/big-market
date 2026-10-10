@@ -1,22 +1,18 @@
-package com.pro.domain.activity.model.entity;
+package com.pro.infrastructure.dao.po;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
+
+import java.sql.Date;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥
- * @description 活动上架实体对象
- * @create 2024-10-26 18:31
+ * @description 活动展台 - 上架活动
+ * @create 2024-10-26 17:06
  */
 @Data
-@Builder
-@AllArgsConstructor
-@NoArgsConstructor
-public class RaffleActivityStageEntity {
+public class RaffleActivityListing {
 
-    /** 自增ID */
+    /** ID */
     private Long id;
     /** 渠道 */
     private String channel;
@@ -37,7 +33,11 @@ public class RaffleActivityStageEntity {
     /** 活动结束时间 */
     private java.util.Date endDateTime;
 
-    /** 上架状态；create、active、inactive、expire；未上架活动为 null */
+    /** 上架状态；create、active、inactive、expire */
     private String state;
+    /** 创建时间 */
+    private Date createTime;
+    /** 更新时间 */
+    private Date updateTime;
 
 }

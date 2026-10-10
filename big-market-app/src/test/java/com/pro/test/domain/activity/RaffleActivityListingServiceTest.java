@@ -4,7 +4,7 @@ import com.pro.domain.activity.model.entity.ActivityEntity;
 import com.pro.domain.activity.model.valobj.ActivityStateVO;
 import com.pro.domain.activity.repository.IActivityRepository;
 import com.pro.domain.activity.service.armory.IActivityArmory;
-import com.pro.domain.activity.service.stage.RaffleActivityStageService;
+import com.pro.domain.activity.service.stage.RaffleActivityListingService;
 import com.pro.domain.strategy.service.armory.IStrategyArmory;
 import com.pro.types.enums.ResponseCode;
 import com.pro.types.exception.AppException;
@@ -18,19 +18,19 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.*;
 
-public class RaffleActivityStageServiceTest {
+public class RaffleActivityListingServiceTest {
 
     private IActivityRepository repository;
     private IActivityArmory activityArmory;
     private IStrategyArmory strategyArmory;
-    private RaffleActivityStageService service;
+    private RaffleActivityListingService service;
 
     @Before
     public void setUp() {
         repository = mock(IActivityRepository.class);
         activityArmory = mock(IActivityArmory.class);
         strategyArmory = mock(IStrategyArmory.class);
-        service = new RaffleActivityStageService();
+        service = new RaffleActivityListingService();
         ReflectionTestUtils.setField(service, "repository", repository);
         ReflectionTestUtils.setField(service, "activityArmory", activityArmory);
         ReflectionTestUtils.setField(service, "strategyArmory", strategyArmory);

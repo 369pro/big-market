@@ -7,6 +7,7 @@ import com.pro.domain.award.model.aggregate.UserAwardRecordAggregate;
 import com.pro.domain.award.model.entity.TaskEntity;
 import com.pro.domain.award.model.entity.UserAwardRecordEntity;
 import com.pro.domain.award.model.entity.UserCreditAwardEntity;
+import com.pro.domain.award.model.valobj.AwardStateVO;
 import com.pro.domain.award.model.valobj.AccountStatusVO;
 import com.pro.domain.award.repository.IAwardRepository;
 import com.pro.infrastructure.dao.*;
@@ -125,6 +126,27 @@ public class AwardRepository implements IAwardRepository {
     }
 
     @Override
+    public UserAwardRecordEntity queryAwardRecord(String userId, String orderId) {
+        UserAwardRecord request = new UserAwardRecord();
+        request.setUserId(userId);
+        request.setOrderId(orderId);
+        try {
+            dbRouter.doRouter(userId);
+            UserAwardRecord record = userAwardRecordDao.queryByUserIdAndOrderId(request);
+            if (record == null) return null;
+            return UserAwardRecordEntity.builder()
+                    .userId(record.getUserId())
+                    .orderId(record.getOrderId())
+                    .awardId(record.getAwardId())
+                    .awardTitle(record.getAwardTitle())
+                    .awardState(toAwardState(record.getAwardState()))
+                    .build();
+        } finally {
+            dbRouter.clear();
+        }
+    }
+
+    @Override
     public String queryAwardKey(Integer awardId) {
         return awardDao.queryAwardKeyByAwardId(awardId);
     }
@@ -160,7 +182,8 @@ public class AwardRepository implements IAwardRepository {
                         UserAwardRecord persistedAwardRecord = userAwardRecordDao.queryByUserIdAndOrderId(userAwardRecordReq);
                         if (isCompletedAwardRecord(persistedAwardRecord, userAwardRecordReq)) {
                             log.warn("更新中奖记录，重复更新拦截 userId:{} giveOutPrizesAggregate:{}", userId, JSON.toJSONString(giveOutPrizesAggregate));
-                            status.setRollbackOnly();
+                            // This is a verified duplicate. The transaction has only read the
+                            // persisted record, so there is no local mutation to roll back.
                             return 0;
                         }
 
@@ -207,18 +230,28 @@ public class AwardRepository implements IAwardRepository {
                 && expectedAwardRecord.getAwardId().equals(persistedAwardRecord.getAwardId());
     }
 
+    private AwardStateVO toAwardState(String state) {
+        if ("create".equals(state)) return AwardStateVO.create;
+        if ("complete".equals(state) || PERSISTED_COMPLETED_AWARD_STATE.equals(state)) {
+            return AwardStateVO.complete;
+        }
+        if ("fail".equals(state)) return AwardStateVO.fail;
+        return null;
+    }
+
     @Override
-    public boolean updateAwardRecordCompletedState(String userId, String orderId) {
+    public boolean updateAwardRecordCompletedState(String userId, String orderId, Integer awardId) {
         UserAwardRecord userAwardRecordReq = new UserAwardRecord();
         userAwardRecordReq.setUserId(userId);
         userAwardRecordReq.setOrderId(orderId);
+        userAwardRecordReq.setAwardId(awardId);
 
         try {
             dbRouter.doRouter(userId);
             Boolean updated = transactionTemplate.execute(status -> {
                 if (userAwardRecordDao.updateAwardRecordCompletedState(userAwardRecordReq) == 1) return true;
                 UserAwardRecord existing = userAwardRecordDao.queryByUserIdAndOrderId(userAwardRecordReq);
-                if (existing == null || !PERSISTED_COMPLETED_AWARD_STATE.equals(existing.getAwardState())) {
+                if (!isCompletedAwardRecord(existing, userAwardRecordReq)) {
                     throw new IllegalStateException("Remote grant succeeded but local award cannot be completed");
                 }
                 return false;

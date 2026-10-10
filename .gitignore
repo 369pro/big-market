@@ -41,3 +41,10 @@ build/
 /docs/dev-ops/local/artifacts/
 /docs/dev-ops/local/mysql.env
 /.idea/
+
+/docs/dev-ops/local/agent-internal.env
+/docs/dev-ops/local/agent-service.env
+/docs/dev-ops/local/llm.env
+/tmp/openai-audit/
+/tmp/agent-smoke/
+/docs/dev-ops/local/marketing-rpc.env

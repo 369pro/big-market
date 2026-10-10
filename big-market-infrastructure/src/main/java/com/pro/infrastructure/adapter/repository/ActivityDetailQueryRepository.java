@@ -4,14 +4,14 @@ import cn.bugstack.middleware.db.router.DBContextHolder;
 import cn.bugstack.middleware.db.router.strategy.IDBRouterStrategy;
 import com.pro.adapter.repository.IActivityDetailQueryRepository;
 import com.pro.infrastructure.dao.IAwardDao;
-import com.pro.infrastructure.dao.IRaffleActivityCountDao;
+import com.pro.infrastructure.dao.IRaffleQuotaPlanDao;
 import com.pro.infrastructure.dao.IRaffleActivityDao;
 import com.pro.infrastructure.dao.IRaffleActivitySkuDao;
 import com.pro.infrastructure.dao.IRuleTreeNodeDao;
 import com.pro.infrastructure.dao.IStrategyAwardDao;
 import com.pro.infrastructure.dao.po.Award;
 import com.pro.infrastructure.dao.po.RaffleActivity;
-import com.pro.infrastructure.dao.po.RaffleActivityCount;
+import com.pro.infrastructure.dao.po.RaffleQuotaPlan;
 import com.pro.infrastructure.dao.po.RaffleActivitySku;
 import com.pro.infrastructure.dao.po.RuleTreeNode;
 import com.pro.infrastructure.dao.po.StrategyAward;
@@ -60,7 +60,7 @@ public class ActivityDetailQueryRepository implements IActivityDetailQueryReposi
     @Resource
     private IRaffleActivitySkuDao raffleActivitySkuDao;
     @Resource
-    private IRaffleActivityCountDao raffleActivityCountDao;
+    private IRaffleQuotaPlanDao raffleQuotaPlanDao;
     @Resource
     private IRedisService redisService;
     @Resource
@@ -155,15 +155,15 @@ public class ActivityDetailQueryRepository implements IActivityDetailQueryReposi
         }
         List<RaffleActivityDetailQueryVO.Sku> skus = new ArrayList<>(activitySkus.size());
         for (RaffleActivitySku activitySku : activitySkus) {
-            RaffleActivityCount activityCount = raffleActivityCountDao
-                    .queryRaffleActivityCountByActivityCountId(activitySku.getActivityCountId());
+            RaffleQuotaPlan activityCount = raffleQuotaPlanDao
+                    .queryRaffleQuotaPlanByQuotaPlanId(activitySku.getQuotaPlanId());
             Integer dbSurplus = activitySku.getStockCountSurplus();
             StockSnapshot stock = readSkuStock(activitySku.getSku(), dbSurplus);
 
             skus.add(RaffleActivityDetailQueryVO.Sku.builder()
                     .sku(activitySku.getSku())
                     .activityId(activitySku.getActivityId())
-                    .activityCountId(activitySku.getActivityCountId())
+                    .quotaPlanId(activitySku.getQuotaPlanId())
                     .countQuota(activityCount == null ? null : activityCount.getTotalCount())
                     .dayCount(activityCount == null ? null : activityCount.getDayCount())
                     .monthCount(activityCount == null ? null : activityCount.getMonthCount())

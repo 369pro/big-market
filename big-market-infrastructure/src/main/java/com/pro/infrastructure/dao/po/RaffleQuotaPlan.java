@@ -6,11 +6,11 @@ import java.util.Date;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥
- * @description 抽奖活动次数配置表 持久化对象
+ * @description 抽奖次数套餐配置表 持久化对象
  * @create 2024-03-02 13:13
  */
 @Data
-public class RaffleActivityCount {
+public class RaffleQuotaPlan {
 
     /**
      * 自增ID
@@ -18,9 +18,9 @@ public class RaffleActivityCount {
     private Long id;
 
     /**
-     * 活动次数编号
+     * 抽奖次数套餐业务编号
      */
-    private Long activityCountId;
+    private Long quotaPlanId;
 
     /**
      * 总次数

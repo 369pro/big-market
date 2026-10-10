@@ -31,6 +31,7 @@ import com.pro.domain.strategy.model.valobj.RuleLogicCheckTypeVO;
 import com.pro.domain.strategy.model.valobj.RuleTreeNodeLineVO;
 import com.pro.domain.strategy.model.valobj.RuleTreeNodeVO;
 import com.pro.domain.strategy.model.valobj.RuleTreeVO;
+import com.pro.domain.strategy.model.valobj.WeightRuleConfig;
 import com.pro.domain.strategy.model.valobj.RuleWeightVO;
 import com.pro.domain.strategy.model.valobj.StrategyAwardRuleModelVO;
 import com.pro.domain.strategy.model.valobj.StrategyAwardStockDeductEvent;
@@ -549,15 +550,11 @@ public class StrategyRepository implements IStrategyRepository {
         strategyRuleReq.setStrategyId(strategyId);
         strategyRuleReq.setRuleModel(DefaultChainFactory.LogicModel.RULE_WEIGHT.getCode());
         String ruleValue = strategyRuleDao.queryStrategyRuleValue(strategyRuleReq);
-        // 2. 借助实体对象转换规则
-        StrategyRuleEntity strategyRuleEntity = new StrategyRuleEntity();
-        strategyRuleEntity.setRuleModel(DefaultChainFactory.LogicModel.RULE_WEIGHT.getCode());
-        strategyRuleEntity.setRuleValue(ruleValue);
-        Map<String, List<Integer>> ruleWeightValues = strategyRuleEntity.getRuleWeightValues();
+        // 2. 解析规则组并组装奖品配置
+        List<WeightRuleConfig> ruleWeightGroups = WeightRuleConfig.parse(ruleValue);
         // 3. 遍历规则组装奖品配置
-        Set<String> ruleWeightKeys = ruleWeightValues.keySet();
-        for (String ruleWeightKey : ruleWeightKeys) {
-            List<Integer> awardIds = ruleWeightValues.get(ruleWeightKey);
+        for (WeightRuleConfig ruleWeightGroup : ruleWeightGroups) {
+            List<Integer> awardIds = ruleWeightGroup.getAwardIds();
             List<RuleWeightVO.Award> awardList = new ArrayList<>();
             // 也可以修改为一次从数据库查询
             for (Integer awardId : awardIds) {
@@ -573,7 +570,7 @@ public class StrategyRepository implements IStrategyRepository {
 
             ruleWeightVOS.add(RuleWeightVO.builder()
                     .ruleValue(ruleValue)
-                    .weight(Integer.valueOf(ruleWeightKey.split(Constants.COLON)[0]))
+                    .weight(ruleWeightGroup.getLowerBound())
                     .awardIds(awardIds)
                     .awardList(awardList)
                     .build());

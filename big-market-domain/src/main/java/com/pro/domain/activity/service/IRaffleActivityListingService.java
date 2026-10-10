@@ -1,7 +1,7 @@
 package com.pro.domain.activity.service;
 
 
-import com.pro.domain.activity.model.entity.RaffleActivityStageEntity;
+import com.pro.domain.activity.model.entity.RaffleActivityListingEntity;
 
 import java.util.List;
 
@@ -10,7 +10,7 @@ import java.util.List;
  * @description 抽奖活动上架服务接口
  * @create 2024-10-26 17:37
  */
-public interface IRaffleActivityStageService {
+public interface IRaffleActivityListingService {
 
     /**
      * 添加上架活动
@@ -44,10 +44,10 @@ public interface IRaffleActivityStageService {
      */
     Long queryStageActivityId(String channel, String source);
 
-    List<RaffleActivityStageEntity> queryStageActivityList();
+    List<RaffleActivityListingEntity> queryStageActivityList();
 
     Long queryStageActivity2ActiveById(Long id);
 
-    RaffleActivityStageEntity queryStageActivityById(Long id);
+    RaffleActivityListingEntity queryStageActivityById(Long id);
 
 }

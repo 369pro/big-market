@@ -7,19 +7,19 @@ import lombok.NoArgsConstructor;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥
- * @description 活动次数实体对象
+ * @description 抽奖次数套餐实体对象
  * @create 2024-03-16 11:19
  */
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class ActivityCountEntity {
+public class QuotaPlanEntity {
 
     /**
-     * 活动次数编号
+     * 抽奖次数套餐业务编号
      */
-    private Long activityCountId;
+    private Long quotaPlanId;
 
     /**
      * 总次数

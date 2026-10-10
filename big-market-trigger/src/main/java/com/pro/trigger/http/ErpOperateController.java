@@ -3,8 +3,8 @@ package com.pro.trigger.http;
 import com.alibaba.fastjson.JSON;
 import com.pro.adapter.repository.IActivityDetailQueryRepository;
 import com.pro.adapter.repository.IESUserRaffleOrderRepository;
-import com.pro.domain.activity.model.entity.RaffleActivityStageEntity;
-import com.pro.domain.activity.service.IRaffleActivityStageService;
+import com.pro.domain.activity.model.entity.RaffleActivityListingEntity;
+import com.pro.domain.activity.service.IRaffleActivityListingService;
 import com.pro.model.valobj.ESUserRaffleOrderPageVO;
 import com.pro.model.valobj.ESUserRaffleOrderQueryVO;
 import com.pro.model.valobj.ESUserRaffleOrderVO;
@@ -16,7 +16,7 @@ import com.pro.trigger.api.dto.RaffleActivitySkuResponseDTO;
 import com.pro.trigger.api.dto.ESUserRaffleOrderPageResponseDTO;
 import com.pro.trigger.api.dto.ESUserRaffleOrderQueryRequestDTO;
 import com.pro.trigger.api.dto.ESUserRaffleOrderResponseDTO;
-import com.pro.trigger.api.dto.RaffleActivityStageResponseDTO;
+import com.pro.trigger.api.dto.RaffleActivityListingResponseDTO;
 import com.pro.trigger.api.dto.UpdateStageActivity2ActiveRequestDTO;
 import com.pro.trigger.api.dto.UpdateStageActivityStateRequestDTO;
 import com.pro.trigger.api.response.Response;
@@ -48,7 +48,7 @@ public class ErpOperateController implements IErpOperateService {
     @Resource
     private IActivityDetailQueryRepository activityDetailQueryRepository;
     @Resource
-    private IRaffleActivityStageService raffleActivityStageService;
+    private IRaffleActivityListingService raffleActivityListingService;
     /**
      * 查询运营数据，用户抽奖单列表
      * curl --request GET --url 'http://localhost:8098/api/v1/raffle/erp/query_user_raffle_order'
@@ -156,7 +156,7 @@ public class ErpOperateController implements IErpOperateService {
             }
             Long id = requestDTO.getId();
             log.info("更新上架活动状态为生效开始 id:{}", id);
-            raffleActivityStageService.updateStageActivity2Active(id);
+            raffleActivityListingService.updateStageActivity2Active(id);
             log.info("更新上架活动状态为生效完成 id:{}", id);
 
             return Response.<Boolean>builder()
@@ -193,7 +193,7 @@ public class ErpOperateController implements IErpOperateService {
             if (requestDTO == null) {
                 throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), "request body must not be null");
             }
-            raffleActivityStageService.updateStageActivityState(
+            raffleActivityListingService.updateStageActivityState(
                     requestDTO.getActivityId(), requestDTO.getChannel(), requestDTO.getSource(), requestDTO.getState());
             return Response.<Boolean>builder()
                     .code(ResponseCode.SUCCESS.getCode())
@@ -221,31 +221,31 @@ public class ErpOperateController implements IErpOperateService {
 
     @RequestMapping(value = "query_raffle_activity_stage_list", method = RequestMethod.GET)
     @Override
-    public Response<List<RaffleActivityStageResponseDTO>> queryRaffleActivityStageList() {
+    public Response<List<RaffleActivityListingResponseDTO>> queryRaffleActivityListingList() {
         try {
-            List<RaffleActivityStageResponseDTO> raffleActivityStageResponseDTOS = new ArrayList<>();
-            List<RaffleActivityStageEntity> raffleActivityStageEntities = raffleActivityStageService.queryStageActivityList();
-            for (RaffleActivityStageEntity raffleActivityStage : raffleActivityStageEntities) {
-                RaffleActivityStageResponseDTO raffleActivityStageResponseDTO = RaffleActivityStageResponseDTO.builder()
-                        .id(raffleActivityStage.getId())
-                        .channel(raffleActivityStage.getChannel())
-                        .source(raffleActivityStage.getSource())
-                        .activityId(raffleActivityStage.getActivityId())
-                        .state(raffleActivityStage.getState())
-                    .activityName(raffleActivityStage.getActivityName())
-                    .activityDesc(raffleActivityStage.getActivityDesc())
-                    .strategyId(raffleActivityStage.getStrategyId())
-                    .activityState(raffleActivityStage.getActivityState())
-                    .beginDateTime(raffleActivityStage.getBeginDateTime())
-                    .endDateTime(raffleActivityStage.getEndDateTime())
+            List<RaffleActivityListingResponseDTO> raffleActivityListingResponseDTOS = new ArrayList<>();
+            List<RaffleActivityListingEntity> raffleActivityListingEntities = raffleActivityListingService.queryStageActivityList();
+            for (RaffleActivityListingEntity raffleActivityListing : raffleActivityListingEntities) {
+                RaffleActivityListingResponseDTO raffleActivityListingResponseDTO = RaffleActivityListingResponseDTO.builder()
+                        .id(raffleActivityListing.getId())
+                        .channel(raffleActivityListing.getChannel())
+                        .source(raffleActivityListing.getSource())
+                        .activityId(raffleActivityListing.getActivityId())
+                        .state(raffleActivityListing.getState())
+                    .activityName(raffleActivityListing.getActivityName())
+                    .activityDesc(raffleActivityListing.getActivityDesc())
+                    .strategyId(raffleActivityListing.getStrategyId())
+                    .activityState(raffleActivityListing.getActivityState())
+                    .beginDateTime(raffleActivityListing.getBeginDateTime())
+                    .endDateTime(raffleActivityListing.getEndDateTime())
                         .build();
-                raffleActivityStageResponseDTOS.add(raffleActivityStageResponseDTO);
+                raffleActivityListingResponseDTOS.add(raffleActivityListingResponseDTO);
             }
 
-            Response<List<RaffleActivityStageResponseDTO>> response = Response.<List<RaffleActivityStageResponseDTO>>builder()
+            Response<List<RaffleActivityListingResponseDTO>> response = Response.<List<RaffleActivityListingResponseDTO>>builder()
                     .code(ResponseCode.SUCCESS.getCode())
                     .info(ResponseCode.SUCCESS.getInfo())
-                    .data(raffleActivityStageResponseDTOS)
+                    .data(raffleActivityListingResponseDTOS)
                     .build();
 
             log.info("查询上架活动数据 {}", JSON.toJSONString(response));
@@ -253,7 +253,7 @@ public class ErpOperateController implements IErpOperateService {
             return response;
         } catch (Exception e) {
             log.error("查询上架活动数据失败", e);
-            return Response.<List<RaffleActivityStageResponseDTO>>builder()
+            return Response.<List<RaffleActivityListingResponseDTO>>builder()
                     .code(ResponseCode.UN_ERROR.getCode())
                     .info(ResponseCode.UN_ERROR.getInfo())
                     .build();
@@ -331,7 +331,7 @@ public class ErpOperateController implements IErpOperateService {
                 skus.add(RaffleActivitySkuResponseDTO.builder()
                         .sku(sku.getSku())
                         .activityId(sku.getActivityId())
-                        .activityCountId(sku.getActivityCountId())
+                        .quotaPlanId(sku.getQuotaPlanId())
                         .countQuota(sku.getCountQuota())
                         .dayCount(sku.getDayCount())
                         .monthCount(sku.getMonthCount())

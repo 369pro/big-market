@@ -10,7 +10,9 @@ import com.pro.types.exception.AppException;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.stereotype.Service;
 
-import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
 /**
@@ -21,8 +23,8 @@ import java.util.Date;
 @Service
 public class RaffleActivityPartakeService extends AbstractRaffleActivityPartake{
 
-    private final SimpleDateFormat dateFormatMonth = new SimpleDateFormat("yyyy-MM");
-    private final SimpleDateFormat dateFormatDay = new SimpleDateFormat("yyyy-MM-dd");
+    private static final DateTimeFormatter DATE_FORMAT_MONTH = DateTimeFormatter.ofPattern("uuuu-MM");
+    private static final DateTimeFormatter DATE_FORMAT_DAY = DateTimeFormatter.ofPattern("uuuu-MM-dd");
 
     public RaffleActivityPartakeService(IActivityRepository activityRepository) {
         super(activityRepository);
@@ -38,8 +40,9 @@ public class RaffleActivityPartakeService extends AbstractRaffleActivityPartake{
             throw new AppException(ResponseCode.ACCOUNT_QUOTA_ERROR.getCode(), ResponseCode.ACCOUNT_QUOTA_ERROR.getInfo());
         }
 
-        String month = dateFormatMonth.format(currentDate);
-        String day = dateFormatDay.format(currentDate);
+        LocalDate localDate = currentDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        String month = DATE_FORMAT_MONTH.format(localDate);
+        String day = DATE_FORMAT_DAY.format(localDate);
 
         // 查询月账户额度
         ActivityAccountMonthEntity activityAccountMonthEntity = activityRepository.queryActivityAccountMonthByUserId(userId, activityId, month);

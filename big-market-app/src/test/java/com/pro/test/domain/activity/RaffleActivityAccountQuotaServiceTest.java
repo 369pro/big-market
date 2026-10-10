@@ -53,7 +53,7 @@ public class RaffleActivityAccountQuotaServiceTest {
 
     /**
      * 测试库存消耗和最终一致更新
-     * 1. raffle_activity_sku 库表库存可以设置20个
+     * 1. raffle_quota_product 库表库存可以设置20个
      * 2. 清空 redis 缓存 flushall
      * 3. for 循环20次，消耗完库存，最终数据库剩余库存为0
      */

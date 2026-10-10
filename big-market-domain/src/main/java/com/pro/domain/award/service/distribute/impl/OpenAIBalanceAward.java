@@ -32,6 +32,6 @@ public class OpenAIBalanceAward implements IDistributeAward {
             throw new IllegalArgumentException("balance award must be positive CNY with at most 8 decimal places");
         }
         port.creditBalance(award.getUserId(), "raffle:" + award.getUserId() + ":" + award.getOrderId(), amount);
-        repository.updateAwardRecordCompletedState(award.getUserId(), award.getOrderId());
+        repository.updateAwardRecordCompletedState(award.getUserId(), award.getOrderId(), award.getAwardId());
     }
 }

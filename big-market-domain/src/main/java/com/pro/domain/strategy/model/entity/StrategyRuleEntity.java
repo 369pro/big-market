@@ -1,14 +1,14 @@
 package com.pro.domain.strategy.model.entity;
 
 
-import com.pro.types.common.Constants;
+import com.pro.domain.strategy.model.valobj.WeightRuleConfig;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -36,38 +36,16 @@ public class StrategyRuleEntity {
     private String ruleDesc;
 
     /**
-     * 获取权重值
-     * 数据案例；4000:102,103,104,105 5000:102,103,104,105,106,107 6000:102,103,104,105,106,107,108,109
+     * 获取权重奖品池，键保留原始 group 文本供抽奖装配和派发使用。
      */
     public Map<String, List<Integer>> getRuleWeightValues() {
-        if(!"rule_weight".equals(ruleModel)){
+        if (!"rule_weight".equals(ruleModel)) {
             return null;
         }
-        Map<String, List<Integer>> resMap = new HashMap<>();
-        String[] ruleValueGroupList = ruleValue.split(Constants.SPACE);
-        for(String ruleValueGroup : ruleValueGroupList){
-            // 缺少了校验工作
-            if (ruleValueGroup == null || ruleValueGroup.isEmpty()) {
-                return resMap;
-            }
-            // 分割字符串以获取键和值
-            String[] parts = ruleValueGroup.split(Constants.COLON);
-            if (parts.length != 2) {
-                throw new IllegalArgumentException("rule_weight rule_rule invalid input format" + ruleValueGroup);
-            }
-            String[] awardIdStrList = parts[1].split(Constants.SPLIT);
-            List<Integer> awardIdSet = new ArrayList<>();
-            for(String awardIdStr : awardIdStrList){
-                awardIdSet.add(Integer.parseInt(awardIdStr));
-            }
-            resMap.put(ruleValueGroup, awardIdSet);
+        Map<String, List<Integer>> result = new LinkedHashMap<>();
+        for (WeightRuleConfig group : WeightRuleConfig.parse(ruleValue)) {
+            result.put(group.getRawGroup(), new ArrayList<>(group.getAwardIds()));
         }
-        return resMap;
+        return result;
     }
-
-//    public static void main(String[] args) {
-//        StrategyRuleEntity strategyRuleEntity = new StrategyRuleEntity();
-//        strategyRuleEntity.setRuleValue("4000:102,103,104,105 5000:102,103,104,105,106,107 6000:102,103,104,105,106,107,108,109");
-//        Map<String, List<Integer>> ruleWeightValues = strategyRuleEntity.getRuleWeightValues();
-//    }
 }

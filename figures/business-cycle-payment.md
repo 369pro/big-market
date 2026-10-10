@@ -1,0 +1,16 @@
+# 4.2 充值：钱包入账，并触发营销返利
+
+```mermaid
+%%{init: {"theme": "base", "themeVariables": {"fontSize": "20px", "fontFamily": "Arial, sans-serif", "primaryColor": "#eff6ff", "primaryTextColor": "#172b4d", "primaryBorderColor": "#6b9bd2", "lineColor": "#52677e", "edgeLabelBackground": "#ffffff"}, "flowchart": {"htmlLabels": false, "curve": "linear", "nodeSpacing": 30, "rankSpacing": 35, "padding": 16}, "fontFamily": "Arial, sans-serif"}}%%
+flowchart TB
+  Pay["支付宝充值"] --> Confirm["验签 / 查单确认支付"]
+  Confirm --> Delivery["订单幂等发货"]
+  Delivery --> Wallet["对话钱包<br/>进入 4.3 对话计费"]
+  Delivery --> Event["同事务保存<br/>DELIVERED 事件"]
+  Event --> Rebate["RocketMQ + Dubbo<br/>幂等返利"]
+  Rebate --> Fact["返利订单 + task<br/>回到 4.1 的返利链路"]
+  classDef wallet fill:#eaf7ee,stroke:#469165,color:#16462a,stroke-width:2px;
+  classDef returnFlow fill:#fff6e8,stroke:#bf8b40,color:#644314;
+  class Wallet wallet;
+  class Fact returnFlow;
+```

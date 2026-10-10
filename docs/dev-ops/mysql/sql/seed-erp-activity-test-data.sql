@@ -79,17 +79,17 @@ BEGIN
 
     SELECT COUNT(*)
       INTO target_count_rows
-      FROM `raffle_activity_count`
-     WHERE `activity_count_id` IN (22301, 22302, 22303, 22304);
+      FROM `raffle_quota_plan`
+     WHERE `quota_plan_id` IN (22301, 22302, 22303, 22304);
 
     SELECT COUNT(*)
       INTO target_sku_rows
-      FROM `raffle_activity_sku`
+      FROM `raffle_quota_product`
      WHERE `sku` IN (9911, 9912, 9913, 9914);
 
     SELECT COUNT(*)
       INTO target_stage_rows
-      FROM `raffle_activity_stage`
+      FROM `raffle_activity_listing`
      WHERE `channel` = 'test'
        AND `source` = 'erp_demo'
        AND `activity_id` = 100501;
@@ -201,86 +201,86 @@ BEGIN
        );
 
     -- Clone the existing participation-count definitions into private IDs.
-    INSERT INTO `raffle_activity_count`
-        (`activity_count_id`, `total_count`, `day_count`, `month_count`)
+    INSERT INTO `raffle_quota_plan`
+        (`quota_plan_id`, `total_count`, `day_count`, `month_count`)
     SELECT 22301, c.`total_count`, c.`day_count`, c.`month_count`
-      FROM `raffle_activity_count` c
-     WHERE c.`activity_count_id` = 22201
+      FROM `raffle_quota_plan` c
+     WHERE c.`quota_plan_id` = 22201
        AND NOT EXISTS (
-           SELECT 1 FROM `raffle_activity_count` t
-            WHERE t.`activity_count_id` = 22301
+           SELECT 1 FROM `raffle_quota_plan` t
+            WHERE t.`quota_plan_id` = 22301
        );
 
-    INSERT INTO `raffle_activity_count`
-        (`activity_count_id`, `total_count`, `day_count`, `month_count`)
+    INSERT INTO `raffle_quota_plan`
+        (`quota_plan_id`, `total_count`, `day_count`, `month_count`)
     SELECT 22302, c.`total_count`, c.`day_count`, c.`month_count`
-      FROM `raffle_activity_count` c
-     WHERE c.`activity_count_id` = 22202
+      FROM `raffle_quota_plan` c
+     WHERE c.`quota_plan_id` = 22202
        AND NOT EXISTS (
-           SELECT 1 FROM `raffle_activity_count` t
-            WHERE t.`activity_count_id` = 22302
+           SELECT 1 FROM `raffle_quota_plan` t
+            WHERE t.`quota_plan_id` = 22302
        );
 
-    INSERT INTO `raffle_activity_count`
-        (`activity_count_id`, `total_count`, `day_count`, `month_count`)
+    INSERT INTO `raffle_quota_plan`
+        (`quota_plan_id`, `total_count`, `day_count`, `month_count`)
     SELECT 22303, c.`total_count`, c.`day_count`, c.`month_count`
-      FROM `raffle_activity_count` c
-     WHERE c.`activity_count_id` = 22203
+      FROM `raffle_quota_plan` c
+     WHERE c.`quota_plan_id` = 22203
        AND NOT EXISTS (
-           SELECT 1 FROM `raffle_activity_count` t
-            WHERE t.`activity_count_id` = 22303
+           SELECT 1 FROM `raffle_quota_plan` t
+            WHERE t.`quota_plan_id` = 22303
        );
 
-    INSERT INTO `raffle_activity_count`
-        (`activity_count_id`, `total_count`, `day_count`, `month_count`)
+    INSERT INTO `raffle_quota_plan`
+        (`quota_plan_id`, `total_count`, `day_count`, `month_count`)
     SELECT 22304, c.`total_count`, c.`day_count`, c.`month_count`
-      FROM `raffle_activity_count` c
-     WHERE c.`activity_count_id` = 22201
+      FROM `raffle_quota_plan` c
+     WHERE c.`quota_plan_id` = 22201
        AND NOT EXISTS (
-           SELECT 1 FROM `raffle_activity_count` t
-            WHERE t.`activity_count_id` = 22304
+           SELECT 1 FROM `raffle_quota_plan` t
+            WHERE t.`quota_plan_id` = 22304
        );
 
     -- Clone each SKU with its own SKU/count IDs and the source inventory
     -- snapshot. stock_count_surplus remains mutable after an ERP test.
-    INSERT INTO `raffle_activity_sku`
-        (`sku`, `activity_id`, `activity_count_id`, `stock_count`,
+    INSERT INTO `raffle_quota_product`
+        (`sku`, `activity_id`, `quota_plan_id`, `stock_count`,
          `stock_count_surplus`, `product_amount`)
     SELECT 9911, 100501, 22301, s.`stock_count`, s.`stock_count_surplus`, s.`product_amount`
-      FROM `raffle_activity_sku` s
+      FROM `raffle_quota_product` s
      WHERE s.`sku` = 9901
        AND NOT EXISTS (
-           SELECT 1 FROM `raffle_activity_sku` t WHERE t.`sku` = 9911
+           SELECT 1 FROM `raffle_quota_product` t WHERE t.`sku` = 9911
        );
 
-    INSERT INTO `raffle_activity_sku`
-        (`sku`, `activity_id`, `activity_count_id`, `stock_count`,
+    INSERT INTO `raffle_quota_product`
+        (`sku`, `activity_id`, `quota_plan_id`, `stock_count`,
          `stock_count_surplus`, `product_amount`)
     SELECT 9912, 100502, 22302, s.`stock_count`, s.`stock_count_surplus`, s.`product_amount`
-      FROM `raffle_activity_sku` s
+      FROM `raffle_quota_product` s
      WHERE s.`sku` = 9902
        AND NOT EXISTS (
-           SELECT 1 FROM `raffle_activity_sku` t WHERE t.`sku` = 9912
+           SELECT 1 FROM `raffle_quota_product` t WHERE t.`sku` = 9912
        );
 
-    INSERT INTO `raffle_activity_sku`
-        (`sku`, `activity_id`, `activity_count_id`, `stock_count`,
+    INSERT INTO `raffle_quota_product`
+        (`sku`, `activity_id`, `quota_plan_id`, `stock_count`,
          `stock_count_surplus`, `product_amount`)
     SELECT 9913, 100503, 22303, s.`stock_count`, s.`stock_count_surplus`, s.`product_amount`
-      FROM `raffle_activity_sku` s
+      FROM `raffle_quota_product` s
      WHERE s.`sku` = 9903
        AND NOT EXISTS (
-           SELECT 1 FROM `raffle_activity_sku` t WHERE t.`sku` = 9913
+           SELECT 1 FROM `raffle_quota_product` t WHERE t.`sku` = 9913
        );
 
-    INSERT INTO `raffle_activity_sku`
-        (`sku`, `activity_id`, `activity_count_id`, `stock_count`,
+    INSERT INTO `raffle_quota_product`
+        (`sku`, `activity_id`, `quota_plan_id`, `stock_count`,
          `stock_count_surplus`, `product_amount`)
     SELECT 9914, 100504, 22304, s.`stock_count`, s.`stock_count_surplus`, s.`product_amount`
-      FROM `raffle_activity_sku` s
+      FROM `raffle_quota_product` s
      WHERE s.`sku` = 9901
        AND NOT EXISTS (
-           SELECT 1 FROM `raffle_activity_sku` t WHERE t.`sku` = 9914
+           SELECT 1 FROM `raffle_quota_product` t WHERE t.`sku` = 9914
        );
 
     -- Activity 100501 is valid and open, but its stage row is deliberately
@@ -325,13 +325,13 @@ BEGIN
            SELECT 1 FROM `raffle_activity` WHERE `activity_id` = 100504
        );
 
-    INSERT INTO `raffle_activity_stage`
+    INSERT INTO `raffle_activity_listing`
         (`channel`, `source`, `activity_id`, `state`, `create_time`, `update_time`)
     SELECT 'test', 'erp_demo', 100501, 'create', NOW(), NOW()
       FROM DUAL
      WHERE NOT EXISTS (
            SELECT 1
-             FROM `raffle_activity_stage`
+             FROM `raffle_activity_listing`
             WHERE `channel` = 'test'
               AND `source` = 'erp_demo'
               AND `activity_id` = 100501
@@ -349,13 +349,13 @@ BEGIN
       FROM `strategy_award`
      WHERE `strategy_id` IN (100081, 100082, 100083, 100084);
     SELECT COUNT(*) INTO target_count_rows
-      FROM `raffle_activity_count`
-     WHERE `activity_count_id` IN (22301, 22302, 22303, 22304);
+      FROM `raffle_quota_plan`
+     WHERE `quota_plan_id` IN (22301, 22302, 22303, 22304);
     SELECT COUNT(*) INTO target_sku_rows
-      FROM `raffle_activity_sku`
+      FROM `raffle_quota_product`
      WHERE `sku` IN (9911, 9912, 9913, 9914);
     SELECT COUNT(*) INTO target_stage_rows
-      FROM `raffle_activity_stage`
+      FROM `raffle_activity_listing`
      WHERE `channel` = 'test'
        AND `source` = 'erp_demo'
        AND `activity_id` = 100501;
@@ -374,15 +374,15 @@ BEGIN
              WHERE `activity_id` = 100503 AND `strategy_id` = 100083) <> 1
        OR (SELECT COUNT(*) FROM `raffle_activity`
              WHERE `activity_id` = 100504 AND `strategy_id` = 100084) <> 1
-       OR (SELECT COUNT(*) FROM `raffle_activity_sku`
-             WHERE `sku` = 9911 AND `activity_id` = 100501 AND `activity_count_id` = 22301) <> 1
-       OR (SELECT COUNT(*) FROM `raffle_activity_sku`
-             WHERE `sku` = 9912 AND `activity_id` = 100502 AND `activity_count_id` = 22302) <> 1
-       OR (SELECT COUNT(*) FROM `raffle_activity_sku`
-             WHERE `sku` = 9913 AND `activity_id` = 100503 AND `activity_count_id` = 22303) <> 1
-       OR (SELECT COUNT(*) FROM `raffle_activity_sku`
-             WHERE `sku` = 9914 AND `activity_id` = 100504 AND `activity_count_id` = 22304) <> 1
-       OR (SELECT COUNT(*) FROM `raffle_activity_stage`
+       OR (SELECT COUNT(*) FROM `raffle_quota_product`
+             WHERE `sku` = 9911 AND `activity_id` = 100501 AND `quota_plan_id` = 22301) <> 1
+       OR (SELECT COUNT(*) FROM `raffle_quota_product`
+             WHERE `sku` = 9912 AND `activity_id` = 100502 AND `quota_plan_id` = 22302) <> 1
+       OR (SELECT COUNT(*) FROM `raffle_quota_product`
+             WHERE `sku` = 9913 AND `activity_id` = 100503 AND `quota_plan_id` = 22303) <> 1
+       OR (SELECT COUNT(*) FROM `raffle_quota_product`
+             WHERE `sku` = 9914 AND `activity_id` = 100504 AND `quota_plan_id` = 22304) <> 1
+       OR (SELECT COUNT(*) FROM `raffle_activity_listing`
              WHERE `channel` = 'test' AND `source` = 'erp_demo' AND `activity_id` = 100501) <> 1 THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'ERP activity test fixture verification failed';
@@ -404,13 +404,13 @@ SELECT `activity_id`, `activity_name`, `begin_date_time`, `end_date_time`,
  ORDER BY `activity_id`;
 
 SELECT `id`, `channel`, `source`, `activity_id`, `state`
-  FROM `raffle_activity_stage`
+  FROM `raffle_activity_listing`
  WHERE `channel` = 'test'
    AND `source` = 'erp_demo'
  ORDER BY `id`;
 
-SELECT `sku`, `activity_id`, `activity_count_id`, `stock_count`,
+SELECT `sku`, `activity_id`, `quota_plan_id`, `stock_count`,
        `stock_count_surplus`, `product_amount`
-  FROM `raffle_activity_sku`
+  FROM `raffle_quota_product`
  WHERE `sku` IN (9911, 9912, 9913, 9914)
  ORDER BY `sku`;

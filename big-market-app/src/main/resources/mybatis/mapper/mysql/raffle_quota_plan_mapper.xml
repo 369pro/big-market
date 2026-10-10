@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.pro.infrastructure.dao.IRaffleActivityCountDao">
+<mapper namespace="com.pro.infrastructure.dao.IRaffleQuotaPlanDao">
 
-    <resultMap id="dataMap" type="com.pro.infrastructure.dao.po.RaffleActivityCount">
+    <resultMap id="dataMap" type="com.pro.infrastructure.dao.po.RaffleQuotaPlan">
         <id column="id" property="id"/>
-        <result column="activity_count_id" property="activityCountId"/>
+        <result column="quota_plan_id" property="quotaPlanId"/>
         <result column="total_count" property="totalCount"/>
         <result column="day_count" property="dayCount"/>
         <result column="month_count" property="monthCount"/>
@@ -12,10 +12,10 @@
         <result column="update_time" property="updateTime"/>
     </resultMap>
 
-    <select id="queryRaffleActivityCountByActivityCountId" parameterType="java.lang.Long" resultMap="dataMap">
-        select activity_count_id, total_count, day_count, month_count
-        from raffle_activity_count
-        where activity_count_id = #{activityCountId}
+    <select id="queryRaffleQuotaPlanByQuotaPlanId" parameterType="java.lang.Long" resultMap="dataMap">
+        select quota_plan_id, total_count, day_count, month_count
+        from raffle_quota_plan
+        where quota_plan_id = #{quotaPlanId}
     </select>
 
 </mapper>

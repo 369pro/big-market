@@ -23,8 +23,8 @@ public class ActivityArmory implements IActivityArmory, IActivityDispatch{
         cacheActivitySkuStockCount(sku, activitySkuEntity.getStockCountSurplus());
         // 预热活动【查询时预热到缓存】
         activityRepository.queryRaffleActivityByActivityId(activitySkuEntity.getActivityId());
-        // 预热活动次数【查询时预热到缓存】
-        activityRepository.queryRaffleActivityCountByActivityCountId(activitySkuEntity.getActivityCountId());
+        // 预热抽奖次数套餐【查询时预热到缓存】
+        activityRepository.queryRaffleQuotaPlanByQuotaPlanId(activitySkuEntity.getQuotaPlanId());
         return true;
     }
 
@@ -35,8 +35,8 @@ public class ActivityArmory implements IActivityArmory, IActivityDispatch{
         // 一个活动有多种获取次数方式比如 签到，做任务。。。
         for (ActivitySkuEntity activitySkuEntity : activitySkuEntities) {
             cacheActivitySkuStockCount(activitySkuEntity.getSku(), activitySkuEntity.getStockCountSurplus());
-            // 预热活动次数【查询时预热到缓存】 todo 这里什么时候用到
-            activityRepository.queryRaffleActivityCountByActivityCountId(activitySkuEntity.getActivityCountId());
+            // 预热抽奖次数套餐【查询时预热到缓存】 todo 这里什么时候用到
+            activityRepository.queryRaffleQuotaPlanByQuotaPlanId(activitySkuEntity.getQuotaPlanId());
         }
         // 这里 activityId都是一样的
         // 预热活动【查询时预热到缓存】

@@ -18,7 +18,7 @@ public class OpenAIBalanceAwardTest {
         new OpenAIBalanceAward(port, repository).giveOutPrizes(award(null));
         org.mockito.InOrder order = inOrder(port, repository);
         order.verify(port).creditBalance("user", "raffle:user:order", new BigDecimal("0.01"));
-        order.verify(repository).updateAwardRecordCompletedState("user", "order");
+        order.verify(repository).updateAwardRecordCompletedState("user", "order", 1110);
     }
 
     @Test
@@ -30,7 +30,7 @@ public class OpenAIBalanceAwardTest {
             new OpenAIBalanceAward(port, repository).giveOutPrizes(award("0.05"));
             fail("remote failure must propagate");
         } catch (RuntimeException expected) {
-            verify(repository, never()).updateAwardRecordCompletedState(anyString(), anyString());
+            verify(repository, never()).updateAwardRecordCompletedState(anyString(), anyString(), anyInt());
         }
     }
 

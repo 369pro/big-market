@@ -1,7 +1,7 @@
 package com.pro.domain.activity.service.quota;
 
 
-import com.pro.domain.activity.model.entity.ActivityCountEntity;
+import com.pro.domain.activity.model.entity.QuotaPlanEntity;
 import com.pro.domain.activity.model.entity.ActivityEntity;
 import com.pro.domain.activity.model.entity.ActivitySkuEntity;
 import com.pro.domain.activity.repository.IActivityRepository;
@@ -31,8 +31,8 @@ public class RaffleActivityAccountQuotaSupport {
         return activityRepository.queryRaffleActivityByActivityId(activityId);
     }
 
-    public ActivityCountEntity queryRaffleActivityCountByActivityCountId(Long activityCountId) {
-        return activityRepository.queryRaffleActivityCountByActivityCountId(activityCountId);
+    public QuotaPlanEntity queryRaffleQuotaPlanByQuotaPlanId(Long quotaPlanId) {
+        return activityRepository.queryRaffleQuotaPlanByQuotaPlanId(quotaPlanId);
     }
 
 }

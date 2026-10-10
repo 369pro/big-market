@@ -46,7 +46,7 @@ public class RebateMessageCustomer {
             BaseEvent.EventMessage<SendRebateMessageEvent.RebateMessage> eventMessage =
                     JSON.parseObject(message, new TypeReference<BaseEvent.EventMessage<SendRebateMessageEvent.RebateMessage>>() {}.getType());
             SendRebateMessageEvent.RebateMessage rebateMessage = eventMessage.getData();
-            if (rebateMessage == null || rebateMessage.getUserId() == null || "null".equals(rebateMessage.getUserId())
+            if (rebateMessage == null || rebateMessage.getUserId() == null || "null".equalsIgnoreCase(rebateMessage.getUserId())
                     || rebateMessage.getBizId() == null || rebateMessage.getBizId().trim().isEmpty()) {
                 throw new IllegalArgumentException("Invalid rebate message identity");
             }

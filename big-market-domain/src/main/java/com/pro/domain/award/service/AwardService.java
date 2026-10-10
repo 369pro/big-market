@@ -5,14 +5,19 @@ import com.pro.domain.award.model.aggregate.UserAwardRecordAggregate;
 import com.pro.domain.award.model.entity.DistributeAwardEntity;
 import com.pro.domain.award.model.entity.TaskEntity;
 import com.pro.domain.award.model.entity.UserAwardRecordEntity;
+import com.pro.domain.award.model.valobj.AwardStateVO;
 import com.pro.domain.award.model.valobj.TaskStateVO;
 import com.pro.domain.award.repository.IAwardRepository;
 import com.pro.domain.award.service.distribute.IDistributeAward;
 import com.pro.types.event.BaseEvent;
+import com.pro.types.enums.ResponseCode;
+import com.pro.types.exception.AppException;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * @author Fuzhengwei bugstack.cn @小傅哥
@@ -67,11 +72,31 @@ public class AwardService implements IAwardService {
 
     @Override
     public void distributeAward(DistributeAwardEntity distributeAwardEntity) throws Exception {
+        if (distributeAwardEntity == null
+                || StringUtils.isBlank(distributeAwardEntity.getUserId())
+                || StringUtils.isBlank(distributeAwardEntity.getOrderId())
+                || distributeAwardEntity.getAwardId() == null) {
+            throw new AppException(ResponseCode.ILLEGAL_PARAMETER.getCode(), "Invalid award delivery identity");
+        }
+        UserAwardRecordEntity persistedAward = awardRepository.queryAwardRecord(
+                distributeAwardEntity.getUserId(), distributeAwardEntity.getOrderId());
+        if (persistedAward == null
+                || !Objects.equals(persistedAward.getAwardId(), distributeAwardEntity.getAwardId())) {
+            throw new IllegalStateException("Award record does not match the delivery message");
+        }
+        if (AwardStateVO.complete.equals(persistedAward.getAwardState())) {
+            // A completed record for the same prize is a verified duplicate.  Returning
+            // before any port call also avoids relying on remote idempotency for retries.
+            return;
+        }
+        if (!AwardStateVO.create.equals(persistedAward.getAwardState())) {
+            throw new IllegalStateException("Award record is not pending delivery");
+        }
         // 奖品Key
         String awardKey = awardRepository.queryAwardKey(distributeAwardEntity.getAwardId());
-        if (null == awardKey) {
+        if (StringUtils.isBlank(awardKey)) {
             log.error("分发奖品，奖品ID不存在。awardKey:{}", awardKey);
-            return;
+            throw new IllegalStateException("Award definition does not exist: " + distributeAwardEntity.getAwardId());
         }
 
         // 奖品服务

@@ -1,4 +1,129 @@
-# 幂等性排查与修复
+# 项目幂等性说明与加固记录
+
+## 当前实现概览（2026-10-08）
+
+本节以本仓库当前工作区源码为准；后面的 2026-10-01～02 内容保留为历史记录。历史测试数字、外部服务地址及部署状态不代表本轮重新验证的结果。本轮不修改相邻仓库、不重启服务、不迁移真实数据库。
+
+**业务幂等、消息幂等、并发防超卖是三个不同问题。** 同一逻辑请求必须复用请求号；一次业务产生的事件重发必须复用事件号；Redis 锁只负责协调并发，持久化订单/流水和唯一约束才是跨重启的业务依据。消息发送成功也不代表奖品已到账。
+
+### 一、按业务定位幂等保护
+
+| 业务 | 幂等标识 | 防重依据与原子边界 | 重试结果与限制 |
+| --- | --- | --- | --- |
+| 活动抽奖 | 用户 + 操作 draw + requestId 的 SHA-256 | 抽奖订单 `(user_id, request_id)` 唯一约束；`create → processing` 条件更新抢占策略执行；中奖记录、发奖 task、订单完成在本地事务内 | used 读取原奖品；processing 返回处理中，不重新扣奖品库存；旧客户端不传 requestId 不保证响应丢失后的结果重放 |
+| 积分兑换 | 用户 + 操作 exchange + requestId 对应的业务号 | 复用活动额度订单、积分流水；同业务号不同 SKU 拒绝 | 重试继续原业务，不把另一个未支付订单当成当前请求 |
+| 活动 SKU 预占 | 用户 + outBusinessNo 的预占标识 | Lua 内查询已有预占，再检查和扣库存、保存 SKU 对应关系 | 售罄后原请求仍能找到预占；Redis 与后续 MySQL 建单不在同一事务 |
+| 活动次数入账 | 额度订单 outBusinessNo / orderId | 条件改变订单状态，与总/日/月额度变更同一事务 | 已完成订单不重复增加次数 |
+| 行为返利/签到 | 用户 + 行为类型 + 奖励类型 + 外部业务号 | SHA-256 业务键、唯一订单、业务订单与 task 同事务 | 重试查原订单；下游继续用该业务号去重，不使用“日期”作为全局唯一号 |
+| 积分增减 | 用户与外部业务号、原交易载荷 | 唯一积分流水 + 条件余额更新 + task 同一事务 | 同参数复用原流水，冲突参数拒绝；账户余额不能因并发扣款变负 |
+| 积分奖品 | 用户 + 抽奖 orderId | 中奖状态条件更新与积分到账同一事务 | 已完成且载荷相符才算重复成功，找不到原记录不能吞掉异常 |
+| 外部额度/余额奖品 | 用户 + 抽奖 orderId 透传为 requestId | 本地检查中奖记录；远端必须以该请求号持久化去重 | 远端成功、本地确认失败后仍可能再次调用远端，依赖接收端幂等契约 |
+| 奖品库存消息 | Redis Outbox 中稳定的 `strategyId:awardId:uuid:surplus` | MySQL stock inbox 唯一 event_id；去重记录与库存快照更新同事务 | 同 ID 同载荷跳过，不同载荷拒绝；同批按奖品取最低余量 |
+| MQ 补发 | task.messageId 或 Redis Outbox 成员 | 原消息重发，消费者使用业务流水/Inbox 防重 | Broker 确认前不删除待发送依据；消费者提交前不返回消费成功 |
+
+代码入口：
+
+- 请求标识：[RequestIdempotency.java](../big-market-trigger/src/main/java/com/pro/trigger/idempotency/RequestIdempotency.java)、[RaffleActivityController.java](../big-market-trigger/src/main/java/com/pro/trigger/http/RaffleActivityController.java)。
+- 抽奖状态：[AbstractRaffleActivityPartake.java](../big-market-domain/src/main/java/com/pro/domain/activity/service/partake/AbstractRaffleActivityPartake.java)、[user_raffle_order_mapper.xml](../big-market-app/src/main/resources/mybatis/mapper/mysql/user_raffle_order_mapper.xml)。
+- 活动预占：[activity_stock_reserve.lua](../big-market-app/src/main/resources/lua/activity_stock_reserve.lua)、[ActivityRepository.java](../big-market-infrastructure/src/main/java/com/pro/infrastructure/adapter/repository/ActivityRepository.java)。
+- 积分、返利、发奖：[CreditRepository.java](../big-market-infrastructure/src/main/java/com/pro/infrastructure/adapter/repository/CreditRepository.java)、[BehaviorRebateService.java](../big-market-domain/src/main/java/com/pro/domain/rebate/service/BehaviorRebateService.java)、[AwardRepository.java](../big-market-infrastructure/src/main/java/com/pro/infrastructure/adapter/repository/AwardRepository.java)。
+
+### 二、抽奖重试为什么不会再次执行库存脚本
+
+```mermaid
+flowchart TD
+    A[用户沿用 requestId 重试] --> B[按用户和操作生成请求键]
+    B --> C{查原抽奖订单}
+    C -->|used| D[读取持久化中奖结果]
+    C -->|processing| E[返回处理中，等待核对]
+    C -->|create| F[条件更新为 processing]
+    C -->|没有| G[事务创建订单并扣活动次数]
+    G --> F
+    F -->|抢占成功| H[执行策略和 Redis 库存扣减]
+    F -->|抢占失败| E
+    H --> I[本地事务保存中奖记录、发奖 task、used 状态]
+```
+
+奖品 Lua 本身没有 drawRequestId 去重。其 UUID 标识一次扣减事件，不能把再次调用脚本变成业务重放。正常入口依靠上述订单状态阻止第二次执行策略；绕过入口直接调用策略服务不享有这层保护。`processing` 不能按超时时间直接改回 `create`，否则第一次可能已成功扣库存。当前这是防重复执行的安全停点，不是自动完成恢复。
+
+### 三、当前库存攒批与消息重投
+
+```mermaid
+flowchart TD
+    A[Redis Lua 扣减与 Outbox 写入] --> B[立即投递普通 RocketMQ 消息]
+    A --> C[每 5 秒补偿扫描未确认 Outbox]
+    C --> B
+    B --> D[StockMessageBatcher 本机内存攒批]
+    D -->|达到 500 条或首条后 1 秒| E[按 eventId 去重]
+    E --> F[同一数据库事务写 Inbox]
+    F --> G[按策略和奖品取新事件的最低 surplus]
+    G --> H[SQL LEAST 同步库存并提交]
+    H --> I[完成 future，消费回调返回成功]
+```
+
+- 攒批是 [StockMessageBatcher](../big-market-trigger/src/main/java/com/pro/trigger/listener/StockMessageBatcher.java) 的本地计时器，不是 RocketMQ 延迟通知。多个奖品可以进入同一批，之后再分组。
+- [RocketMqConfig](../big-market-app/src/main/java/com/pro/config/RocketMqConfig.java) 通过 `batcher.submit(messages).get()` 等待落库，异常返回重试；数量与时间见 [application.yml](../big-market-app/src/main/resources/application.yml)。1 秒是触发条件，不是端到端延迟上限。
+- [StrategyRepository](../big-market-infrastructure/src/main/java/com/pro/infrastructure/adapter/repository/StrategyRepository.java) 与 [strategy_award_mapper.xml](../big-market-app/src/main/resources/mybatis/mapper/mysql/strategy_award_mapper.xml) 实现 Inbox 与 `LEAST(award_count_surplus, surplus)`。重复/乱序快照不会增回库存，不是按收到的消息条数再减一次。
+- 活动 SKU 是独立链路：[UpdateActivitySkuStockJob](../big-market-trigger/src/main/java/com/pro/trigger/job/UpdateActivitySkuStockJob.java) 每 2 秒读取 Redis 绝对余量同步，成功后清理旧通知。
+
+### 四、故障与运维边界
+
+| 断点 | 当前处理 | 仍需关注 |
+| --- | --- | --- |
+| 业务事务已提交，响应丢失 | 沿用业务请求号读取原记录 | 客户端不能失败后立即换新请求号 |
+| 抽奖 processing 后进程退出 | 不重新执行策略，返回处理中 | 需根据订单、库存事件、中奖记录人工或专门恢复流程核对 |
+| MQ 发送成功但 Outbox 状态更新失败 | 原事件重发，下游去重 | 监控重试、死信及长期未处理记录 |
+| MySQL 已提交但消费确认丢失 | 原消息重投，唯一 Inbox / 业务流水拦截 | 去重记录保留时间必须覆盖所有允许的重放窗口 |
+| Redis 数据回退或丢失 | Lua 原子性本身不能恢复 | 暂停受影响活动并对账，不能用滞后的数据库库存直接恢复发奖 |
+| 新库存周期或补货 | 当前 LEAST 快照只适用于单调递减库存 | 需要库存版本/新账户，不能让历史快照覆盖补货 |
+
+数据库唯一索引和 Inbox 表是前提，迁移文件见历史章节第 5 节。本次不会自动把迁移应用到运行中的数据库。外部额度服务的幂等承诺必须由接收端的持久化凭据实现，本仓库传递 requestId 不能代替远端验证。
+
+### 五、本轮修复与验证
+
+本轮已完成的源码修复：
+
+1. **奖品库存 Lua**：在扣减前拒绝负数/溢出 TTL、错误库存/Outbox 类型；库存 key 缺失时直接失败，不再隐式创建 0 库存。纠正“两个正常并发请求得到同一余量”的注释。Java 的 EVALSHA 与 EVAL 回退统一读取同一份 classpath 脚本，避免修复只对预加载路径生效。
+2. **活动预占 Lua**：保存业务预占记录失败时显式恢复刚扣的库存；Java 将异常结果抛出，不能误认为售罄或成功。未增加“缓存丢失就从旧数据库余量自动恢复库存”的行为。
+3. **抽奖建单竞争**：同 requestId 的并发插入命中唯一约束后，查找并校验已提交的获胜订单；只有确认为同业务才返回原订单。保留 processing 的保守停止策略。
+4. **发奖身份与状态**：分发前查询持久化中奖记录，拒绝缺失记录或错误奖品；已完成的相同奖品直接返回。完成状态更新增加 award_id 条件，防止错误消息完成另一种奖品。缺失奖品定义抛出异常，不再静默确认消息。
+5. **业务键输入**：积分/返利拒绝缺失或超出表字段长度的业务号，避免空幂等键和截断后的键冲突；积分金额拒绝无法精确保存的小数精度。活动下单先检查交易策略及基础配置，非法输入不能先占库存。
+6. **并发日期与异常响应**：抽奖额度的日/月日期生成改用线程安全格式化；空请求返回明确参数错误。随机积分的概率算法保持原样，未为实现幂等改成订单哈希随机。
+
+新增/扩展验证覆盖：抽奖重复建单恢复、错误业务键、发奖身份不匹配和已完成重投、条件更新、Lua 预验证及 fallback、活动预占写入失败后库存恢复。源码修复不需要新增表；原有幂等迁移仍是运行前提。
+
+**仍未承诺的保证**：当前中奖表未单独保存完整 awardConfig，发奖消息的配置随原 task 保存；历史空配置可能读取当前奖品配置。因此这里只对用户、订单、奖品及状态作本地校验，不宣称任意重构消息的同 ID 不同配置均被本地账本识别。外部发奖在本地尚未完成时可能被并发调用，接收端仍必须用原 requestId 去重并校验金额。Redis 资源故障/ACL 等不可预见命令错误不具有数据库式自动回滚保证。
+
+本轮最终验证（2026-10-08）：
+
+| 验证 | 结果 |
+| --- | --- |
+| Java 17、当前源码复制到独立临时目录、全模块重新编译、19 个定向测试类 | **69 项通过，0 失败，0 错误，0 跳过** |
+| 其中真实 Redis 奖品脚本检查 | 6 项：正常扣减、缺失库存、负 TTL、溢出 TTL、错误 Outbox 类型、脚本回退 |
+| 活动预占隔离脚本 | 12 个并发同业务请求只扣一次；同键不同 SKU 拒绝；售罄后原请求可重试；非法 TTL 写入失败不扣库存 |
+| `git diff --check` | 通过 |
+
+首次工作区回归通过 68 项；后续增量回归发现 IDE 生成的 `Unresolved compilation problems` class 污染及一个依赖注释文本的脆弱测试。删除该无业务意义断言，保留真实 Redis 行为测试，最终在无旧 class 的独立源码副本完成上述 69 项验证。未删除或替换运行容器挂载的 JAR。
+
+可复用的定向命令（使用 Java 17；Redis 地址显式提供后，连接失败会失败而不是跳过）：
+
+```bash
+# 先把 JAVA_HOME 指向 Java 17，并在环境设置 STOCK_REDIS_PASSWORD。
+# 无 IDE 干扰时可直接在仓库运行；有增量 class 污染时用独立源码副本。
+mvn test -Pdev -pl big-market-app -am -DskipTests=false \
+  -Dtest=BehaviorRebateMessageTest,CreditTransactionFailureTest,ActivityQuotaIdempotencyTest,ActivityStockSnapshotTest,RewardRetryTest,StrategyStockInboxTest,StrategyAwardStockDeductCustomerTest,AwardIdempotencyTest,RequestIdempotencyTest,DrawIdempotencyControllerTest,RocketMqMigrationTest,StockMessageBatcherTest,RaffleActivityPartakeIdempotencyTest,RaffleActivityRequestValidationTest,StockDeductionScriptTest,StockDeductionRedisTest,CreditAdjustServiceValidationTest,AwardServiceValidationTest,OpenAIBalanceAwardTest \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dstock.redis.address=redis://127.0.0.1:16379
+
+# 设置 REDIS_PASSWORD 后运行；只使用并清理随机隔离测试键。
+node docs/dev-ops/test-activity-reservation.cjs
+```
+
+本轮没有运行真实 MySQL 事务集成测试、真实 MQ Broker 故障注入或外部额度服务联调；相应数据库事务/消费回调回归使用测试替身，不能替代生产故障验证。未重启服务、未执行 schema 迁移、未提交或推送代码。
+
+---
+
+# 历史加固记录（2026-10-01～02，原文保留）
 
 日期：2026-10-01 至 2026-10-02。范围：`big-market` 的签到返利、积分兑换、活动库存、抽奖、发奖及其对接的 `chatgpt-data` 额度发放链路。采用 MVP 规模的业务修补，不引入分布式事务框架。
 

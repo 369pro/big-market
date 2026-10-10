@@ -144,7 +144,6 @@ CREATE TABLE `xxl_job_log` (
 
 LOCK TABLES `xxl_job_log` WRITE;
 /*!40000 ALTER TABLE `xxl_job_log` DISABLE KEYS */;
-
 \" > >>>>>>>>>>>触发调度<<<<<<<<<<< </span><br>调度失败：执行器地址为空<br><br>',NULL,0,NULL,0),
 	(112,1,2,NULL,'SendMessageTaskJob_DB1','',NULL,0,'2024-08-10 09:18:35',500,'任务触发类型：Cron触发<br>调度机器：172.19.0.12<br>执行器-注册方式：自动注册<br>执行器-地址列表：null<br>路由策略：第一个<br>阻塞处理策略：单机串行<br>任务超时时间：0<br>失败重试次数：0<br><br><span style=\"color:#00c0ef;\" > >>>>>>>>>>>触发调度<<<<<<<<<<< </span><br>调度失败：执行器地址为空<br><br>',NULL,0,NULL,0),
 	(113,1,4,NULL,'UpdateActivitySkuStockJob','',NULL,0,'2024-08-10 09:18:35',500,'任务触发类型：Cron触发<br>调度机器：172.19.0.12<br>执行器-注册方式：自动注册<br>执行器-地址列表：null<br>路由策略：第一个<br>阻塞处理策略：单机串行<br>任务超时时间：0<br>失败重试次数：0<br><br><span style=\"color:#00c0ef;\" > >>>>>>>>>>>触发调度<<<<<<<<<<< </span><br>调度失败：执行器地址为空<br><br>',NULL,0,NULL,0),
@@ -172,7 +171,6 @@ CREATE TABLE `xxl_job_log_report` (
 
 LOCK TABLES `xxl_job_log_report` WRITE;
 /*!40000 ALTER TABLE `xxl_job_log_report` DISABLE KEYS */;
-
 /*!40000 ALTER TABLE `xxl_job_log_report` ENABLE KEYS */;
 UNLOCK TABLES;
 

@@ -94,6 +94,7 @@ services:
         condition: service_healthy
 
   big-market:
+    restart: unless-stopped
     image: eclipse-temurin:17-jre
     working_dir: /app
     env_file: ./local/mysql.env
@@ -122,10 +123,19 @@ services:
   chatgpt-data:
     image: eclipse-temurin:17-jre
     working_dir: /app
-    env_file: ./local/mysql.env
+    env_file:
+      - ./local/mysql.env
+      - ./local/llm.env
+      - ./local/agent-internal.env
+      - ./local/marketing-rpc.env
     command: ["java", "-Xms128m", "-Xmx512m", "-jar", "/app/chatgpt-data-app.jar"]
     environment:
       TZ: Asia/Shanghai
+      APP_CROSS_ORIGIN: http://localhost:3002
+      PAYMENT_ALIPAY_RETURN_URL: http://localhost:3002/payment/return
+      PAYMENT_EVENTS_ROCKETMQ_ENABLED: "true"
+      PAYMENT_EVENTS_ROCKETMQ_NAMESRV_ADDR: rocketmq-namesrv:9876
+      SPRING_CONFIG_IMPORT: file:/config/payment.properties
       SPRING_CONFIG_ADDITIONAL_LOCATION: file:/config/
       SPRING_PROFILES_ACTIVE: dev,local
     ports:
@@ -133,6 +143,7 @@ services:
     volumes:
       - ./local/artifacts/chatgpt-data-app.jar:/app/chatgpt-data-app.jar:ro
       - ./local/chatgpt-local.yml:/config/application-local.yml:ro
+      - ../../../chatgpt-data/.env.payment:/config/payment.properties:ro
       - ./local/logback-local.xml:/config/logback-local.xml:ro
     depends_on:
       redis:
@@ -141,6 +152,36 @@ services:
         condition: service_healthy
       big-market:
         condition: service_started
+      rocketmq-init:
+        condition: service_completed_successfully
+
+  agent-service:
+    build:
+      context: ../../../agent-service
+    image: llm-market-agent:local
+    env_file:
+      - ./local/agent-service.env
+      - ./local/llm.env
+    environment:
+      TZ: UTC
+    ports:
+      - "127.0.0.1:8094:8093"
+    restart: unless-stopped
+
+  agent-worker:
+    image: llm-market-agent:local
+    command: ["python", "-m", "app.worker"]
+    env_file:
+      - ./local/agent-service.env
+      - ./local/llm.env
+    environment:
+      TZ: UTC
+    depends_on:
+      agent-service:
+        condition: service_started
+      chatgpt-data:
+        condition: service_started
+    restart: unless-stopped
 
   chatgpt-web:
     image: node:20-bookworm-slim
@@ -148,7 +189,8 @@ services:
     command: ["sh", "/startup/start-frontend.sh", "chat"]
     environment:
       NEXT_TELEMETRY_DISABLED: "1"
-      NODE_OPTIONS: --max-old-space-size=1536
+      FRONTEND_MODE: production
+      NODE_OPTIONS: --max-old-space-size=512
       NEXT_PUBLIC_API_HOST_URL: http://127.0.0.1:8091
     ports:
       - "127.0.0.1:3002:3002"
@@ -159,6 +201,7 @@ services:
       - npm-cache:/root/.npm
 
   big-market-erp:
+    restart: unless-stopped
     image: node:20-bookworm-slim
     working_dir: /app
     command: ["sh", "/startup/start-frontend.sh", "erp"]
@@ -166,7 +209,8 @@ services:
       PORT: "8000"
       HOST: 0.0.0.0
       BROWSER: none
-      NODE_OPTIONS: "--max-old-space-size=1536"
+      FRONTEND_MODE: production
+      NODE_OPTIONS: "--max-old-space-size=512"
     ports:
       - "127.0.0.1:8000:8000"
     volumes:

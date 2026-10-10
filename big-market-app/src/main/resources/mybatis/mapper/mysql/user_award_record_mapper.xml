@@ -33,7 +33,7 @@
 
     <update id="updateAwardRecordCompletedState" parameterType="com.pro.infrastructure.dao.po.UserAwardRecord">
         update user_award_record set award_state = 'completed'
-        where user_id = #{userId} and order_id = #{orderId} and award_state = 'create'
+        where user_id = #{userId} and order_id = #{orderId} and award_id = #{awardId} and award_state = 'create'
     </update>
 
 </mapper>

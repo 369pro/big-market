@@ -23,7 +23,7 @@ WHERE activity_id BETWEEN 100501 AND 100504
 ORDER BY activity_id;
 
 SELECT id, channel, source, activity_id, state
-FROM big_market.raffle_activity_stage
+FROM big_market.raffle_activity_listing
 WHERE channel = 'test' AND source = 'erp_demo'
 ORDER BY id;
 
