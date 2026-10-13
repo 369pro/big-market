@@ -70,9 +70,12 @@ docker compose -f docs/dev-ops/docker-compose-local.yml up -d --force-recreate b
 
 Frontend sources are mounted read-only and copied into Docker volumes at startup.
 The chat UI uses a production standalone build to reduce Docker memory usage.
-After changing it, run `NEXT_PUBLIC_API_HOST_URL=http://127.0.0.1:8091 npm run build`
-from `../chatgpt-web`, then restart `chatgpt-web`. Public API addresses are embedded
-at build time. Set `FRONTEND_MODE=development` in the compose service for hot development.
+After changing it, run `npm run build:local` from `../chatgpt-web`, wait for it
+to succeed, then restart `chatgpt-web`. This pins the Docker API to port 8091 and
+builds into `.next-local`; ordinary `.next` builds cannot replace it on restart.
+Startup checks the embedded API address and matching BUILD_ID values before copying
+artifacts. An incomplete or mismatched build fails with an explicit rebuild instruction.
+Public API addresses are embedded at build time. Set `FRONTEND_MODE=development` in the compose service for hot development.
 The ERP runs built assets through Umi preview (512 MiB Node heap), retaining
 the existing local mock login APIs without a resident webpack dev compiler.
 After changing ERP source, rebuild it explicitly, then restart:

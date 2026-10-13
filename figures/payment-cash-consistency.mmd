@@ -1,0 +1,26 @@
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Arial, sans-serif","fontSize":"17px","primaryColor":"#eff6ff","primaryBorderColor":"#2563eb","lineColor":"#475569"},"flowchart":{"curve":"basis","nodeSpacing":30,"rankSpacing":42,"wrappingWidth":310}}}%%
+flowchart TB
+    Start["用户选择充值套餐"] --> Snapshot["创建订单 CREATE<br/>保存支付金额、手续费、到账金额快照"]
+    Snapshot --> Channel["创建支付宝沙箱支付链接<br/>用户完成付款"]
+    Channel --> Notify["异步通知：验签与订单校验"]
+    Recover["前端查单 / 定时补偿<br/>补查漏通知和超时订单"] --> Reconcile["后端主动查询支付渠道"]
+    Notify --> Reconcile
+    Reconcile --> Result{"渠道结果"}
+    Result -->|已支付| Paid["事务 A：确认已支付<br/>CREATE 或 CLOSE<br/>转为 WAIT<br/>支付信息 + PAID outbox"]
+    Result -->|未支付且超时| Close["先向渠道关单<br/>确认关闭后更新本地<br/>CREATE → CLOSE"]
+    Result -->|仍待支付| Pending["保持待支付，后续再查"]
+    Paid -->|同步尝试到账| Deliver["事务 B：钱包到账<br/>WAIT → COMPLETED<br/>唯一流水 + 钱包加余额<br/>DELIVERED outbox"]
+    Paid -.->|PAID 事件补发货| Relay["同步投递 outbox 至 MQ<br/>broker 确认后标 SENT<br/>未 DONE 则超时重投"]
+    Relay -.->|PAID：调用同一幂等到账方法| Deliver
+    Deliver -->|DELIVERED 事件经同一 relay| Rebate["消费者校验事件与订单<br/>Dubbo 触发支付返利<br/>行为：OPENAI_PAY"]
+    Rebate --> Marketing["营销本地事务<br/>返利订单 + task，业务号去重"]
+    Marketing --> Accepted["RPC 成功<br/>事件标记为 DONE<br/>表示营销已受理"]
+    Marketing --> Grant["营销 MQ 消费<br/>幂等发放积分 / 抽奖次数"]
+    Relay -.->|DELIVERED：失败重试返利| Rebate
+    Note["三个不同进度<br/>渠道支付成功 ≠ 钱包到账 ≠ 营销权益到账"]
+    classDef tx fill:#eaf6ef,stroke:#298052,stroke-width:2px;
+    classDef retry fill:#fff7e6,stroke:#b7791f;
+    classDef note fill:#f8fafc,stroke:#94a3b8,stroke-dasharray:4 4;
+    class Paid,Deliver,Marketing tx;
+    class Recover,Relay,Close retry;
+    class Note note;

@@ -2,20 +2,18 @@
 set -eu
 
 if [ "$1" = chat ] && [ "${FRONTEND_MODE:-development}" = production ]; then
-    if [ ! -f /source/.next/standalone/server.js ]; then
-        echo "Build chatgpt-web first: NEXT_PUBLIC_API_HOST_URL=http://127.0.0.1:8091 npm run build" >&2
-        exit 1
-    fi
-    mkdir -p /app/production/.next/static /app/production/public
-    tar -C /source/.next/standalone --exclude='.env*' -cf - . | tar -C /app/production -xf -
-    tar -C /source/.next/static -cf - . | tar -C /app/production/.next/static -xf -
+    # Never deploy the shared .next directory: other builds can use another API.
+    node /source/scripts/verify-local-build.cjs /source/.next-local "${NEXT_PUBLIC_API_HOST_URL:?Missing chat API URL}"
+    mkdir -p /app/production/.next-local/static /app/production/public
+    tar -C /source/.next-local/standalone --exclude='.env*' -cf - . | tar -C /app/production -xf -
+    tar -C /source/.next-local/static -cf - . | tar -C /app/production/.next-local/static -xf -
     tar -C /source/public -cf - . | tar -C /app/production/public -xf -
     cd /app/production
     PORT=3002 HOSTNAME=0.0.0.0 exec node server.js
 fi
 
 # Keep platform-specific dependencies and generated files in Docker volumes.
-tar -C /source --exclude='./node_modules' --exclude='./.git' --exclude='./.next' --exclude='./dist' --exclude='./src/.umi' --exclude='./src/.umi-production' -cf - . | tar -C /app -xf -
+tar -C /source --exclude='./node_modules' --exclude='./.git' --exclude='./.next' --exclude='./.next-local' --exclude='./dist' --exclude='./src/.umi' --exclude='./src/.umi-production' -cf - . | tar -C /app -xf -
 cd /app
 lock_hash=$(sha256sum package-lock.json | cut -d ' ' -f 1)
 if [ ! -f node_modules/.local-lock-hash ] || [ "$(cat node_modules/.local-lock-hash)" != "$lock_hash" ]; then

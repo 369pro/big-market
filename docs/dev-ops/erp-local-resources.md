@@ -1,5 +1,7 @@
 # 本地运营后台资源配置
 
+> 下文记录 2026-10-02 的历史方案。当前聊天环境已切回 Docker `3002/8091`，启动与构建以 [local/README.md](local/README.md) 为准；不要按历史记录停用当前聊天容器。
+
 本机 Docker 的约 8 GiB 内存由 MySQL、Redis、Elasticsearch、Canal、RocketMQ、Nacos、抽奖服务和 ERP 共用。
 
 2026-10-02 排查中，ERP 的 Umi 依赖预编译被 Docker 内存不足终止。处理方式：

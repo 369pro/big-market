@@ -48,3 +48,12 @@ build/
 /tmp/openai-audit/
 /tmp/agent-smoke/
 /docs/dev-ops/local/marketing-rpc.env
+
+# Local-only credentials and generated verification artifacts
+/docs/dev-ops/local/application-local.yml
+/docs/dev-ops/local/chatgpt-local.yml
+/docs/dev-ops/local/auth-account.sql
+/.playwright-cli/
+/node_modules/
+/outputs/
+/tmp/
