@@ -2,10 +2,6 @@
 
 这是一个基于 DDD 分层的抽奖/营销服务。`big-market-app` 是 Spring Boot 启动模块，领域逻辑位于 `big-market-domain`，基础设施实现位于 `big-market-infrastructure`，HTTP/Dubbo 入口位于 `big-market-trigger`，读侧位于 `big-market-querys`。
 
-## 来源与许可证
-
-代码和注释保留原作者 `xiaofuge` / `fuzhengwei` 的来源信息；根 `pom.xml` 当前声明 `Apache License, Version 2.0`。本 README 不为依赖、镜像或外部服务新增许可证声明，请分别遵循其上游条款。
-
 ## 依赖与服务
 
 构建依赖 JDK 17、Maven 和可访问的 Maven 仓库。项目按 Java 17 编译，Spring Boot 为 2.7.12，使用 MyBatis、MySQL Connector 8.0.22、Dubbo/Nacos、Redisson、RocketMQ 5.3.2、Elasticsearch 7.17.14 和 XXL-JOB 2.4.1。
